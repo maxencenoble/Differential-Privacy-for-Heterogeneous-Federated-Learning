@@ -24,7 +24,7 @@ Significant results are available for both of these datasets for logistic regres
 # Structure of the code
 
 - `main.py` : four global options are available.
-    - `generate` : to generate data (only `Logistic`), introduce heterogeneity, split data between users for federated
+    - `generate` : to generate data, introduce heterogeneity, split data between users for federated
       learning and preprocess data
     - `optimum` : to save the best model in a centralized setting (after `generate`)
     - `simulation` : to run simulations of federated learning (after `generate` and `optimum`)
