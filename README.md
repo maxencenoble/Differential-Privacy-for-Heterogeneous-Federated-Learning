@@ -1,5 +1,6 @@
 # **Differential Privacy for Heterogeneous Federated Learning : Utility \& Privacy tradeoffs**
 
+
 In this work, we propose an algorithm DP-SCAFFOLD(-warm), which is a new version of the so-called SCAFFOLD algorithm (
 warm version : wise initialisation of parameters), to tackle heterogeneity issues under mathematical privacy constraints
 known as ``Differential Privacy`` (DP) in a federated learning framework. Using fine results of DP theory, we have
