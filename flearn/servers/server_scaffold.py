@@ -4,7 +4,7 @@ import os
 import h5py
 from flearn.users.user_scaffold import UserSCAFFOLD
 from flearn.servers.server_base import Server
-from utils.model_utils import read_data, read_user_data
+from utils.model_utils import read_data, read_user_data, read_data_cross_validation
 from scipy.stats import rayleigh
 import numpy as np
 
@@ -12,26 +12,31 @@ import numpy as np
 # Implementation for SCAFFOLD Server
 class SCAFFOLD(Server):
     def __init__(self, dataset, algorithm, model, nb_users, nb_samples, user_ratio, sample_ratio, L,
-                 local_learning_rate, max_norm, num_glob_iters, local_updates, users_per_round, similarity, noise,
-                 times, dp, epsilon_target, alpha, beta, number, warm_start):
+                 local_learning_rate, max_norm, num_glob_iters, local_updates, users_per_round, similarity, noise, times,
+                 dp, sigma_gaussian, alpha, beta, number, warm_start, k_5=None):
 
         if similarity is None:
             similarity = (alpha, beta)
 
-        if alpha < 0 and beta < 0:
+        if alpha <0 and beta <0:
             similarity = "iid"
 
         super().__init__(dataset, algorithm, model[0], nb_users, nb_samples, user_ratio, sample_ratio, L, max_norm,
-                         num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, epsilon_target,
+                         num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, sigma_gaussian,
                          number)
         self.control_norms = []
         self.warm_start = warm_start
 
+        local_epochs=round(self.local_updates*sample_ratio)
         # definition of the local learning rate
-        self.local_learning_rate = local_learning_rate / (self.local_updates * self.global_learning_rate)
+        self.local_learning_rate = local_learning_rate / (local_epochs * self.global_learning_rate)
 
         # Initialize data for all  users
-        data = read_data(dataset, self.number, str(self.similarity))
+        if k_5 is None:
+            data = read_data(dataset, self.number, str(self.similarity))
+        else:
+            # 5-fold Cross Validation
+            data = read_data_cross_validation(dataset, self.number, str(self.similarity), k_5)
         total_users = len(data[0])
         for i in range(total_users):
             id, train, test = read_user_data(i, data, dataset)

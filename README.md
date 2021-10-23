@@ -11,25 +11,31 @@ of DP-SCAFFOLD especially when the number of local updates or the level of heter
 
 Two datasets are studied:
 
-- a real-world dataset called ``Femnist`` (an extended version of EMNIST dataset for federated learning)
+- a real-world dataset called ``Femnist`` (an extended version of EMNIST dataset for federated learning), which you see
+  the Accuracy growing with the number of communication rounds (50 local updates first and then 100 local updates) 
 
-![image_femnist](pictures/FEMNIST_test_accuracy_heterogene_epochs_20.png)
+![image_femnist](pictures/femnist_accuracy_k_10-1.png)
+![image_femnist](pictures/femnist_accuracy_k_20-1.png)
 
-- synthetic data called ``Logistic`` for logistic regression models
+- synthetic data called ``Logistic`` for logistic regression models, which you see
+  the train loss decreasing with the number of communication rounds (50 local updates first and then 100 local updates),
 
-![image_logistic](pictures/LOGISTIC_test_accuracy_heterogene_epochs_20.png)
+![image_logistic](pictures/logistic_loss_k_10-1.png)
+![image_logistic](pictures/logistic_loss_k_20-1.png)
 
 Significant results are available for both of these datasets for logistic regression models.
 
 # Structure of the code
 
 - `main.py`: four global options are available.
-    - `generate`: to generate data, introduce heterogeneity, split data between users for federated
-      learning and preprocess data
-    - `optimum` (after `generate`): to run a phase training with unsplitted data and save the "best" empirical model in a centralized setting to properly compare rates of convergence
-    - `simulation` (after `generate` and `optimum`): to run several simulations of federated learning and save the results (accuracy, loss...)
-    - `plot` (after `simulation`): to plot visuals 
-    
+    - `generate`: to generate data, introduce heterogeneity, split data between users for federated learning and
+      preprocess data
+    - `optimum` (after `generate`): to run a phase training with unsplitted data and save the "best" empirical model in
+      a centralized setting to properly compare rates of convergence
+    - `simulation` (after `generate` and `optimum`): to run several simulations of federated learning and save the
+      results (accuracy, loss...)
+    - `plot` (after `simulation`): to plot visuals
+
 ## ./data
 
 Contains generators of synthetic (`Logistic`) and real-world (`Femnist`) data (
@@ -40,8 +46,8 @@ contains a file `data` where the generated data (`train` and `test`) is stored.
 
 - [differential_privacy](flearn/differential_privacy) : contains code to apply Gaussian mechanism (designed to add
   differential privacy to mini-batch stochastic gradients)
-- [optimizers](flearn/optimizers) : contains the optimization framework for each algorithm (adaptation of stochastic gradient
-  descent)
+- [optimizers](flearn/optimizers) : contains the optimization framework for each algorithm (adaptation of stochastic
+  gradient descent)
 - [servers](flearn/servers) : contains the super class `Server` (in `server_base.py`) which is adapted to FedAvg and
   SCAFFOLD (algorithm from the point of view of the server)
 - [trainmodel](flearn/trainmodel) : contains the learning model structures

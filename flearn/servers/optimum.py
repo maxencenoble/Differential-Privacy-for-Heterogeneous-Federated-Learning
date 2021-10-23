@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import copy
+import random
 from torch.utils.data import DataLoader
 from torch.optim import LBFGS
 from torch.optim import SGD
@@ -21,7 +22,7 @@ class Optim:
         self.dataset = dataset
         self.number = str(number)
         self.model = copy.deepcopy(model[0])
-        self.learning_rate = 0.09
+        self.learning_rate = 0.5
 
         if model[1] == 'mclr':
             self.loss = nn.NLLLoss()
@@ -40,9 +41,12 @@ class Optim:
             id, train, test = read_user_data(i, data, dataset)
             self.train_dataset += train
             self.test_dataset += test
+        
+        random.shuffle(self.train_dataset)
+        random.shuffle(self.test_dataset)
 
-        self.batch_size = 100
-        self.epochs = 10
+        self.batch_size = 500
+        self.epochs = 2000
         self.train_loader = DataLoader(dataset=self.train_dataset, batch_size=self.batch_size, shuffle=False)
         self.train_loader_full = DataLoader(dataset=self.train_dataset, batch_size=len(self.train_dataset))
         self.test_loader_full = DataLoader(dataset=self.test_dataset, batch_size=len(self.test_dataset))

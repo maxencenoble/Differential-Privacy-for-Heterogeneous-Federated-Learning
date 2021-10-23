@@ -9,7 +9,7 @@ from scipy import optimize
 
 class Server:
     def __init__(self, dataset, algorithm, model, nb_users, nb_samples, user_ratio, sample_ratio, L, max_norm,
-                 num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, epsilon_target, number):
+                 num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, sigma_gaussian, number):
 
         self.number = str(number)
 
@@ -21,6 +21,7 @@ class Server:
         self.user_ratio = user_ratio
         self.sample_ratio = sample_ratio
         self.global_learning_rate = 1.0
+        # self.global_learning_rate = np.sqrt(users_per_round)
         self.total_train_samples = 0
         self.model = copy.deepcopy(model)
         self.dim_model = sum([torch.flatten(p.data).size().numel() for p in self.model.parameters()])
@@ -33,26 +34,28 @@ class Server:
         self.rs_train_acc, self.rs_train_loss, self.rs_test_loss, self.rs_glob_acc, self.rs_train_diss = [], [], [], [], []
 
         self.dp = dp
-        self.epsilon_target = epsilon_target
+        self.sigma_g = sigma_gaussian
         self.delta_target = 1 / (nb_users * nb_samples)
 
         # T is the total number of communication rounds (>= num_glob_iters used for plot)
-        if dataset == "Logistic" and local_updates == 50:
-            self.T = 1500
-        elif dataset == "Logistic" and local_updates == 100:
-            self.T = 800
-        elif dataset == "Logistic" and local_updates == 200:
-            self.T = 400
-        elif dataset == "Femnist" and local_updates == 50:
-            self.T = 800
-        elif dataset == "Femnist" and local_updates == 100:
-            self.T = 400
-        else:
-            self.T = 400
+        # if dataset == "Logistic" and local_updates == 5:
+        #     self.T = 16000
+        # elif dataset == "Logistic" and local_updates == 50:
+        #     self.T = 1600
+        # elif dataset == "Logistic" and local_updates == 100:
+        #     self.T = 800
+        # elif dataset == "Logistic" and local_updates == 200:
+        #     self.T = 400
+        # elif dataset == "Femnist" and local_updates == 5:
+        #     self.T = 8000
+        # elif dataset == "Femnist" and local_updates == 50:
+        #     self.T = 800
+        # elif dataset == "Femnist" and local_updates == 100:
+        #     self.T = 400
 
-        self.sigma_g = 4 * self.user_ratio * self.sample_ratio * np.sqrt(
-            self.local_updates * self.T * np.log(2 * self.T * self.user_ratio / self.delta_target) * np.log(
-                2 / self.delta_target)) / self.epsilon_target
+        self.T=num_glob_iters
+
+
 
         self.times = times
         self.similarity = similarity
@@ -98,12 +101,12 @@ class Server:
         return transmitting_users
 
     def save_results(self):
-        """ Save metrics (except norms) to h5 file"""
+        """ Save loss, accuracy... to h5 file"""
         file_name = "./results/" + self.dataset + "_" + self.number + '_' + self.algorithm
         file_name += "_" + str(self.similarity) + "s"
         file_name += "_" + str(int(self.local_updates * self.sample_ratio)) + "K"
         if self.dp != "None":
-            file_name += "_" + str(self.epsilon_target) + self.dp
+            file_name += "_" + str(self.sigma_g) + self.dp
         if self.noise:
             file_name += '_noisy'
         file_name += "_" + str(self.times) + ".h5"
@@ -117,12 +120,12 @@ class Server:
                 hf.create_dataset('rs_train_diss', data=self.rs_train_diss)
 
     def save_norms(self):
-        """ Save norms to h5 file"""
+        """ Save norms, to h5 file"""
         file_name = "./results/" + self.dataset + "_" + self.number + '_' + self.algorithm + '_norms'
         file_name += "_" + str(self.similarity) + "s"
-        file_name += "_" + str(int(self.local_updates / self.sample_ratio)) + "K"
+        file_name += "_" + str(int(self.local_updates * self.sample_ratio)) + "K"
         if self.dp != "None":
-            file_name += "_" + str(self.epsilon_target) + self.dp
+            file_name += "_" + str(self.sigma_g) + self.dp
         if self.noise:
             file_name += '_noisy'
         file_name += "_" + str(self.times) + ".h5"
@@ -194,7 +197,7 @@ class Server:
         self.rs_glob_acc.append(glob_acc)
         self.rs_test_loss.append(test_loss)
         self.rs_train_acc.append(train_acc)
-        if self.dp == "None" and (self.similarity == "iid" or self.similarity == 1.0):
+        if self.dp == "None" and self.similarity == "iid":
             self.rs_train_loss.append(train_loss)
         else:
             self.rs_train_loss.append(train_loss_diff)
@@ -204,7 +207,7 @@ class Server:
         print("Average Global Test Accuracy: ", round(glob_acc, 5))
         print("Average Global Test Loss: ", round(test_loss, 5))
         print("Average Global Training Accuracy: ", round(train_acc, 5))
-        if self.dp != "None" or not (self.similarity == "iid" or self.similarity == 1.0):
+        if self.dp != "None" or self.similarity != "iid":
             print("Average Global F(x_t)-F(x*): ", round(train_loss_diff, 5))
         print("Average Global Training Loss: ", round(train_loss, 5))
         print("Average Global Training Gradient Dissimilarity: ", round(train_diss, 5))

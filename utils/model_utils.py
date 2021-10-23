@@ -10,7 +10,7 @@ NUM_CHANNELS = 1
 
 
 def read_data(dataset, number, similarity):
-    """parses data in given train and test data directories
+    '''parses data in given train and test data directories
 
     assumes:
     - the data in the input directories are .json files with 
@@ -22,7 +22,7 @@ def read_data(dataset, number, similarity):
         groups: list of group ids; empty list if none found
         train_data: dictionary of train data
         test_data: dictionary of test data
-    """
+    '''
     train_data_dir = os.path.join('data', dataset, 'data', 'train')
     test_data_dir = os.path.join('data', dataset, 'data', 'test')
     clients = []
@@ -50,6 +50,54 @@ def read_data(dataset, number, similarity):
         test_data.update(cdata['user_data'])
 
     clients = list(sorted(train_data.keys()))
+
+    return clients, groups, train_data, test_data
+
+
+def read_data_cross_validation(dataset, number, similarity, k_5):
+    assert k_5 in np.arange(5), "Index of cross validation not correct"
+
+    '''parses data in given train directories to conduct cross validation
+
+    assumes:
+    - the data in the input directories are .json files with
+        keys 'users' and 'user_data'
+    - the set of train set users is the same as the set of test set users
+
+    Return:
+        clients: list of client ids
+        groups: list of group ids; empty list if none found
+        train_data: dictionary of train data
+        test_data: dictionary of test data
+    '''
+    train_data_dir = os.path.join('data', dataset, 'data', 'train')
+    clients = []
+    groups = []
+    all_data = {}
+    train_data = {}
+    test_data = {}
+
+    train_files = os.listdir(train_data_dir)
+    train_files = [f for f in train_files if f.endswith(number + '_' + similarity + '.json')]
+    for f in train_files:
+        file_path = os.path.join(train_data_dir, f)
+        with open(file_path, 'r') as inf:
+            cdata = json.load(inf)
+        clients.extend(cdata['users'])
+        if 'hierarchies' in cdata:
+            groups.extend(cdata['hierarchies'])
+        all_data.update(cdata['user_data'])
+
+    clients = list(sorted(all_data.keys()))
+    train_len = len(all_data[clients[0]]['x'])
+
+    for index in range(len(clients)):
+        id = clients[index]
+        train_data[id] = {
+            'x': all_data[id]['x'][:round(k_5 * train_len / 5)] + all_data[id]['x'][round((k_5 + 1) * train_len / 5):],
+            'y': all_data[id]['y'][:round(k_5 * train_len / 5)] + all_data[id]['y'][round((k_5 + 1) * train_len / 5):]}
+        test_data[id] = {'x': all_data[id]['x'][round(k_5 * train_len / 5):round((k_5 + 1) * train_len / 5)],
+                         'y': all_data[id]['y'][round(k_5 * train_len / 5):round((k_5 + 1) * train_len / 5)]}
 
     return clients, groups, train_data, test_data
 

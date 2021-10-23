@@ -57,6 +57,7 @@ class UserAVG(User):
             X, y = list(self.trainloader)[0]
 
             self.optimizer.zero_grad()
+            clear_backprops(self.model)
             output = self.model(X)
             loss = self.loss(output, y)
             loss.backward()
@@ -94,7 +95,7 @@ class UserAVG(User):
             loss = self.loss(output, y)
             loss.backward(retain_graph=True)
             compute_grad1(self.model)
-
+            
             for p in self.model.parameters():
                 # clipping single gradients
 
@@ -105,6 +106,7 @@ class UserAVG(User):
                     [grad / max(1, float(grad.data.norm(2)) / max_norm) for grad in p.grad1])
                 p.grad.data = torch.mean(p.grad1, dim=0)
                 p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size)
+                
 
             self.optimizer.step()
 

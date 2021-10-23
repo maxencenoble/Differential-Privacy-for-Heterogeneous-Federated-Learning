@@ -65,6 +65,7 @@ class UserSCAFFOLD(User):
             X, y = list(self.trainloader)[0]
 
             self.optimizer.zero_grad()
+            clear_backprops(self.model)
             output = self.model(X)
             loss = self.loss(output, y)
             loss.backward(retain_graph=True)
@@ -141,6 +142,7 @@ class UserSCAFFOLD(User):
                 X, y = list(self.trainloader)[0]
 
                 self.optimizer.zero_grad()
+                clear_backprops(self.model)
                 output = self.model(X)
                 loss = self.loss(output, y)
                 loss.backward()

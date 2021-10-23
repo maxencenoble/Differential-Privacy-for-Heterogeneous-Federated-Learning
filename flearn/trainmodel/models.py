@@ -5,7 +5,7 @@ import torchvision.models as models
 from torchvision.models.resnet import ResNet, BasicBlock
 
 
-### DNN & Net ###########
+# Neural Networks
 
 class MyResNet18(ResNet):
     def __init__(self, output_dim):
@@ -82,8 +82,25 @@ class DNN(nn.Module):
         return x
 
 
-#########################################
+class CNN(nn.Module):
+    def __init__(self, output_dim):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 20, 5, 1)
+        self.conv2 = nn.Conv2d(20, 50, 5, 1)
+        self.fc1 = nn.Linear(4 * 4 * 50, output_dim)
 
+    def forward(self, x):
+        x = torch.reshape(x, (-1, 1, 28, 28))
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 4 * 4 * 50)
+        x = self.fc1(x)
+        return F.log_softmax(x, dim=1)
+
+
+# Convex models
 
 class MclrLogistic(nn.Module):
     def __init__(self, input_dim=784, output_dim=10):
@@ -106,23 +123,3 @@ class MclrCrossEntropy(nn.Module):
         x = torch.flatten(x, 1)
         outputs = self.linear(x)
         return outputs
-
-
-class CNN(nn.Module):
-    def __init__(self, output_dim):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16,
-                               kernel_size=5, stride=1, padding=2)
-        self.conv2 = nn.Conv2d(16, 32, 5, 1, 2)
-        self.out = nn.Linear(32 * 7 * 7, output_dim)
-
-    def forward(self, x):
-        x = torch.reshape(x, (-1, 1, 28, 28))
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, kernel_size=2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, kernel_size=2)
-        # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
-        x = x.view(x.size(0), -1)
-        x = self.out(x)
-        return F.log_softmax(x, dim=1)

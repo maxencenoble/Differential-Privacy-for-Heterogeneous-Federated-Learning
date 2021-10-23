@@ -142,7 +142,6 @@ def compute_grad1(model: nn.Module, loss_type: str = 'mean') -> None:
 
     assert loss_type in ('sum', 'mean')
     for layer in model.modules():
-        print(layer)
         layer_type = _layer_type(layer)
         if layer_type not in _supported_layers:
             continue
