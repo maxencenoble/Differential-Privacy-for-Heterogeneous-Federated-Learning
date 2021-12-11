@@ -4,12 +4,7 @@ import os
 import torch
 import torch.nn as nn
 
-IMAGE_SIZE = 28
-IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
-NUM_CHANNELS = 1
-
-
-def read_data(dataset, number, similarity):
+def read_data(dataset, number, similarity, dim_pca=None):
     '''parses data in given train and test data directories
 
     assumes:
@@ -23,6 +18,7 @@ def read_data(dataset, number, similarity):
         train_data: dictionary of train data
         test_data: dictionary of test data
     '''
+
     train_data_dir = os.path.join('data', dataset, 'data', 'train')
     test_data_dir = os.path.join('data', dataset, 'data', 'test')
     clients = []
@@ -31,7 +27,11 @@ def read_data(dataset, number, similarity):
     test_data = {}
 
     train_files = os.listdir(train_data_dir)
-    train_files = [f for f in train_files if f.endswith(number + '_' + similarity + '.json')]
+    if dim_pca is not None:
+        train_files = [f for f in train_files if
+                       f.endswith(number + '_' + similarity + '_' + 'pca' + str(dim_pca) + '.json')]
+    else:
+        train_files = [f for f in train_files if f.endswith(number + '_' + similarity + '.json')]
     for f in train_files:
         file_path = os.path.join(train_data_dir, f)
         with open(file_path, 'r') as inf:
@@ -42,7 +42,11 @@ def read_data(dataset, number, similarity):
         train_data.update(cdata['user_data'])
 
     test_files = os.listdir(test_data_dir)
-    test_files = [f for f in test_files if f.endswith(number + '_' + similarity + '.json')]
+    if dim_pca is not None:
+        test_files = [f for f in test_files if
+                      f.endswith(number + '_' + similarity + '_' + 'pca' + str(dim_pca) + '.json')]
+    else:
+        test_files = [f for f in test_files if f.endswith(number + '_' + similarity + '.json')]
     for f in test_files:
         file_path = os.path.join(test_data_dir, f)
         with open(file_path, 'r') as inf:
@@ -54,8 +58,8 @@ def read_data(dataset, number, similarity):
     return clients, groups, train_data, test_data
 
 
-def read_data_cross_validation(dataset, number, similarity, k_5):
-    assert k_5 in np.arange(5), "Index of cross validation not correct"
+def read_data_cross_validation(dataset, number, similarity, k_fold,nb_fold, dim_pca):
+    assert k_fold in np.arange(nb_fold), "Index of cross validation not correct"
 
     '''parses data in given train directories to conduct cross validation
 
@@ -77,8 +81,14 @@ def read_data_cross_validation(dataset, number, similarity, k_5):
     train_data = {}
     test_data = {}
 
+    print(dim_pca)
+
     train_files = os.listdir(train_data_dir)
-    train_files = [f for f in train_files if f.endswith(number + '_' + similarity + '.json')]
+    if dim_pca is not None:
+        train_files = [f for f in train_files if
+                       f.endswith(number + '_' + similarity + '_' + 'pca' + str(dim_pca) + '.json')]
+    else:
+        train_files = [f for f in train_files if f.endswith(number + '_' + similarity + '.json')]
     for f in train_files:
         file_path = os.path.join(train_data_dir, f)
         with open(file_path, 'r') as inf:
@@ -94,10 +104,13 @@ def read_data_cross_validation(dataset, number, similarity, k_5):
     for index in range(len(clients)):
         id = clients[index]
         train_data[id] = {
-            'x': all_data[id]['x'][:round(k_5 * train_len / 5)] + all_data[id]['x'][round((k_5 + 1) * train_len / 5):],
-            'y': all_data[id]['y'][:round(k_5 * train_len / 5)] + all_data[id]['y'][round((k_5 + 1) * train_len / 5):]}
-        test_data[id] = {'x': all_data[id]['x'][round(k_5 * train_len / 5):round((k_5 + 1) * train_len / 5)],
-                         'y': all_data[id]['y'][round(k_5 * train_len / 5):round((k_5 + 1) * train_len / 5)]}
+            'x': all_data[id]['x'][:round(k_fold * train_len / nb_fold)] + all_data[id]['x'][
+                                                                           round((k_fold + 1) * train_len / nb_fold):],
+            'y': all_data[id]['y'][:round(k_fold * train_len / nb_fold)] + all_data[id]['y'][
+                                                                           round((k_fold + 1) * train_len / nb_fold):]}
+        test_data[id] = {
+            'x': all_data[id]['x'][round(k_fold * train_len / nb_fold):round((k_fold + 1) * train_len / nb_fold)],
+            'y': all_data[id]['y'][round(k_fold * train_len / nb_fold):round((k_fold + 1) * train_len / nb_fold)]}
 
     return clients, groups, train_data, test_data
 
@@ -107,12 +120,13 @@ def read_user_data(index, data, dataset):
     train_data = data[2][id]
     test_data = data[3][id]
     X_train, y_train, X_test, y_test = train_data['x'], train_data['y'], test_data['x'], test_data['y']
-    if dataset == "Mnist":
-        X_train = torch.Tensor(X_train).view(-1, NUM_CHANNELS, IMAGE_SIZE, IMAGE_SIZE).type(torch.float32)
+    if dataset == "CIFAR-10":
+        X_train = torch.Tensor(X_train).view(-1, 3, 32, 32).type(torch.float32)
         y_train = torch.Tensor(y_train).type(torch.int64)
-        X_test = torch.Tensor(X_test).view(-1, NUM_CHANNELS, IMAGE_SIZE, IMAGE_SIZE).type(torch.float32)
+        X_test = torch.Tensor(X_test).view(-1, 3, 32, 32).type(torch.float32)
         y_test = torch.Tensor(y_test).type(torch.int64)
     else:
+        # image flatten
         X_train = torch.Tensor(X_train).type(torch.float32)
         y_train = torch.Tensor(y_train).type(torch.int64)
         X_test = torch.Tensor(X_test).type(torch.float32)

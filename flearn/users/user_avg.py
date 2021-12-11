@@ -18,9 +18,9 @@ from utils.autograd_hacks import *
 
 class UserAVG(User):
     def __init__(self, numeric_id, dataset, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
-                 dp, similarity, times):
+                 dp, similarity, times, use_cuda):
         super().__init__(numeric_id, dataset, train_data, test_data, model[0], sample_ratio, learning_rate, L,
-                         local_updates, dp, similarity, times)
+                         local_updates, dp, similarity, times, use_cuda, model[1])
 
         if model[1] == 'mclr':
             self.loss = nn.NLLLoss()
@@ -43,18 +43,20 @@ class UserAVG(User):
 
     def train_no_dp(self, glob_iter):
         """Training phase without differential privacy"""
-        self.model.train()
         for epoch in range(1, self.local_updates + 1):
             self.model.train()
 
             # new batch (data sampling on every local epoch)
-            np.random.seed(500*(self.times+1) * (glob_iter + 1) + epoch + 1)
-            torch.manual_seed(500*(self.times+1) * (glob_iter + 1) + epoch + 1)
+            np.random.seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
+            torch.manual_seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
             train_idx = np.arange(self.train_samples)
             train_sampler = SubsetRandomSampler(train_idx)
             self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
             X, y = list(self.trainloader)[0]
+
+            if self.use_cuda:
+                X, y = X.cuda(), y.cuda()
 
             self.optimizer.zero_grad()
             clear_backprops(self.model)
@@ -75,19 +77,21 @@ class UserAVG(User):
 
     def train_dp(self, sigma_g, glob_iter, max_norm):
         """Training phase under differential privacy"""
-        self.model.train()
 
         for epoch in range(1, self.local_updates + 1):
             self.model.train()
 
             # new batch (data sampling on every local epoch)
-            np.random.seed(500*(self.times+1) * (glob_iter + 1) + epoch + 1)
-            torch.manual_seed(500*(self.times+1) * (glob_iter + 1) + epoch + 1)
+            np.random.seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
+            torch.manual_seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
             train_idx = np.arange(self.train_samples)
             train_sampler = SubsetRandomSampler(train_idx)
             self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
             X, y = list(self.trainloader)[0]
+
+            if self.use_cuda:
+                X, y = X.cuda(), y.cuda()
 
             self.optimizer.zero_grad()
             clear_backprops(self.model)
@@ -95,7 +99,7 @@ class UserAVG(User):
             loss = self.loss(output, y)
             loss.backward(retain_graph=True)
             compute_grad1(self.model)
-            
+
             for p in self.model.parameters():
                 # clipping single gradients
 
@@ -105,8 +109,7 @@ class UserAVG(User):
                 p.grad1 = torch.stack(
                     [grad / max(1, float(grad.data.norm(2)) / max_norm) for grad in p.grad1])
                 p.grad.data = torch.mean(p.grad1, dim=0)
-                p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size)
-                
+                p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size, self.use_cuda)
 
             self.optimizer.step()
 

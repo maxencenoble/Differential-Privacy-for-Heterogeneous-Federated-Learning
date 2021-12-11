@@ -11,7 +11,7 @@ from os.path import dirname
 
 def generate_data(similarity, num_users=100, num_samples=20, ratio_training=0.8, number=0, normalise=True):
     """
-    generate EMNIST-Balanced data among num_users users with a certain similarity
+    generate MNIST data among num_users users with a certain similarity
     :param similarity: portion of similar data between users. Float between 0 to 1
     :param num_users: number of users where data distributed among (int)
     :param num_samples: number of samples distributed to each user (int)
@@ -37,14 +37,14 @@ def generate_data(similarity, num_users=100, num_samples=20, ratio_training=0.8,
     assert (num_users > 0 and num_samples > 0 and similarity >= 0)
 
     # Creation of dataset
-    dataset = 'balanced'
-    train_images, train_labels = emnist.extract_training_samples(dataset)
+    dataset = 'digits'
+    train_images, train_labels = emnist.extract_training_samples(mnist)
     train_images = np.reshape(train_images, (train_images.shape[0], -1))
     train_images = train_images.astype(np.float32)
     train_labels = train_labels.astype(np.int64)
 
     num_of_labels = len(set(train_labels))
-    # = 47 (since there are 47 balanced classes for EMNIST)
+    # = 10 (since there are 10 balanced classes for MNIST)
 
     emnist_data = []
     for i in range(min(train_labels), num_of_labels + min(train_labels)):
@@ -127,7 +127,7 @@ def generate_data(similarity, num_users=100, num_samples=20, ratio_training=0.8,
 def generate_pca_data(similarity, dim_pca=60, num_users=100, num_samples=20, ratio_training=0.8, number=0,
                       normalise=True):
     """
-    generate EMNIST-Balanced data among num_users users with a certain similarity, projected along a family over dim_pca elements
+    generate MNIST-Balanced data among num_users users with a certain similarity, projected along a family over dim_pca elements
     :param similarity: portion of similar data between users. Float between 0 to 1
     :param dim_pca: nb of components for PCA (int)
     :param num_users: number of users where data distributed among (int)
@@ -156,7 +156,7 @@ def generate_pca_data(similarity, dim_pca=60, num_users=100, num_samples=20, rat
     assert (num_users > 0 and num_samples > 0 and similarity >= 0 and dim_pca > 0)
 
     # Creation of dataset
-    dataset = 'balanced'
+    dataset = 'mnist'
     train_images, train_labels = emnist.extract_training_samples(dataset)
     train_images = np.reshape(train_images, (train_images.shape[0], -1))
     train_images = train_images.astype(np.float32)
@@ -170,7 +170,7 @@ def generate_pca_data(similarity, dim_pca=60, num_users=100, num_samples=20, rat
     train_images = pca.transform(train_images)
 
     num_of_labels = len(set(train_labels))
-    # = 47 (since there are 47 balanced classes for EMNIST)
+    # = 10 (since there are 47 balanced classes for EMNIST)
 
     emnist_data = []
     for i in range(min(train_labels), num_of_labels + min(train_labels)):

@@ -13,7 +13,7 @@ import numpy as np
 class SCAFFOLD(Server):
     def __init__(self, dataset, algorithm, model, nb_users, nb_samples, user_ratio, sample_ratio, L,
                  local_learning_rate, max_norm, num_glob_iters, local_updates, users_per_round, similarity, noise, times,
-                 dp, sigma_gaussian, alpha, beta, number, warm_start, k_5=None):
+                 dp, sigma_gaussian, alpha, beta, number,dim_pca,  use_cuda,warm_start, k_fold=None, nb_fold=None):
 
         if similarity is None:
             similarity = (alpha, beta)
@@ -23,26 +23,29 @@ class SCAFFOLD(Server):
 
         super().__init__(dataset, algorithm, model[0], nb_users, nb_samples, user_ratio, sample_ratio, L, max_norm,
                          num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, sigma_gaussian,
-                         number)
+                         number, model[1], use_cuda)
         self.control_norms = []
         self.warm_start = warm_start
 
         local_epochs=round(self.local_updates*sample_ratio)
         # definition of the local learning rate
         self.local_learning_rate = local_learning_rate / (local_epochs * self.global_learning_rate)
-
+        
+        if model[1][-3:] != "PCA":
+            dim_pca=None
+        
         # Initialize data for all  users
-        if k_5 is None:
-            data = read_data(dataset, self.number, str(self.similarity))
+        if k_fold is None:
+            data = read_data(dataset, self.number, str(self.similarity), dim_pca)
         else:
-            # 5-fold Cross Validation
-            data = read_data_cross_validation(dataset, self.number, str(self.similarity), k_5)
+            # Cross Validation
+            data = read_data_cross_validation(dataset, self.number, str(self.similarity), k_fold,nb_fold, dim_pca)
         total_users = len(data[0])
         for i in range(total_users):
             id, train, test = read_user_data(i, data, dataset)
 
             user = UserSCAFFOLD(id, dataset, train, test, model, sample_ratio, self.local_learning_rate, L,
-                                local_updates, dp, similarity, times)
+                                local_updates, dp, similarity, times, use_cuda)
             self.users.append(user)
             self.total_train_samples += user.train_samples
 

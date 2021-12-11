@@ -6,3 +6,4 @@ torchvision
 matplotlib
 tqdm
 h5py
+sklearn

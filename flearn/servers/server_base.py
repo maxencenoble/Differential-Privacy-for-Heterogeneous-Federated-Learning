@@ -9,8 +9,11 @@ from scipy import optimize
 
 class Server:
     def __init__(self, dataset, algorithm, model, nb_users, nb_samples, user_ratio, sample_ratio, L, max_norm,
-                 num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, sigma_gaussian, number):
+                 num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, sigma_gaussian, number,
+                 model_name, use_cuda):
 
+        model_path = os.path.join("models", dataset, model_name)
+        self.model_name = model_name
         self.number = str(number)
 
         # Set up the main attributes
@@ -24,6 +27,12 @@ class Server:
         # self.global_learning_rate = np.sqrt(users_per_round)
         self.total_train_samples = 0
         self.model = copy.deepcopy(model)
+        if use_cuda:
+            self.model = self.model.cuda()
+        self.model_lowest = torch.load(os.path.join(model_path, "server_lowest_" + str(similarity) + ".pt"))
+        if use_cuda:
+            self.model_lowest=self.model_lowest.cuda()
+
         self.dim_model = sum([torch.flatten(p.data).size().numel() for p in self.model.parameters()])
         self.users = []
         self.selected_users = []
@@ -36,26 +45,7 @@ class Server:
         self.dp = dp
         self.sigma_g = sigma_gaussian
         self.delta_target = 1 / (nb_users * nb_samples)
-
-        # T is the total number of communication rounds (>= num_glob_iters used for plot)
-        # if dataset == "Logistic" and local_updates == 5:
-        #     self.T = 16000
-        # elif dataset == "Logistic" and local_updates == 50:
-        #     self.T = 1600
-        # elif dataset == "Logistic" and local_updates == 100:
-        #     self.T = 800
-        # elif dataset == "Logistic" and local_updates == 200:
-        #     self.T = 400
-        # elif dataset == "Femnist" and local_updates == 5:
-        #     self.T = 8000
-        # elif dataset == "Femnist" and local_updates == 50:
-        #     self.T = 800
-        # elif dataset == "Femnist" and local_updates == 100:
-        #     self.T = 400
-
-        self.T=num_glob_iters
-
-
+        self.T = num_glob_iters
 
         self.times = times
         self.similarity = similarity
@@ -70,18 +60,19 @@ class Server:
             user.set_parameters(self.model)
 
     def save_model(self):
-        model_path = os.path.join("models", self.dataset)
+        model_path = os.path.join("models", self.dataset, self.model_name)
         if not os.path.exists(model_path):
             os.makedirs(model_path)
         torch.save(self.model, os.path.join(model_path, "server_" + str(self.similarity) + ".pt"))
 
     def load_model(self):
-        model_path = os.path.join("models", self.dataset, "server_" + str(self.similarity) + ".pt")
+        model_path = os.path.join("models", self.dataset, self.model_name, "server_" + str(self.similarity) + ".pt")
         assert (os.path.exists(model_path))
         self.model = torch.load(model_path)
 
     def model_exists(self):
-        return os.path.exists(os.path.join("models", self.dataset, "server_" + str(self.similarity) + ".pt"))
+        return os.path.exists(
+            os.path.join("models", self.dataset, self.model_name, "server_" + str(self.similarity) + ".pt"))
 
     def select_users(self, round, users_per_round):
         if users_per_round in [len(self.users), 0]:
@@ -102,7 +93,11 @@ class Server:
 
     def save_results(self):
         """ Save loss, accuracy... to h5 file"""
-        file_name = "./results/" + self.dataset + "_" + self.number + '_' + self.algorithm
+        model_path = os.path.join("./results", self.model_name)
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+
+        file_name = model_path + "/" + self.dataset + "_" + self.number + '_' + self.algorithm
         file_name += "_" + str(self.similarity) + "s"
         file_name += "_" + str(int(self.local_updates * self.sample_ratio)) + "K"
         if self.dp != "None":
@@ -121,7 +116,10 @@ class Server:
 
     def save_norms(self):
         """ Save norms, to h5 file"""
-        file_name = "./results/" + self.dataset + "_" + self.number + '_' + self.algorithm + '_norms'
+        model_path = os.path.join("./results", self.model_name)
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+        file_name = model_path + "/" + self.dataset + "_" + self.number + '_' + self.algorithm + '_norms'
         file_name += "_" + str(self.similarity) + "s"
         file_name += "_" + str(int(self.local_updates * self.sample_ratio)) + "K"
         if self.dp != "None":
@@ -157,7 +155,7 @@ class Server:
         losses = []
         losses_diff = []
         for c in self.users:
-            ct, cl, cl_lowest, ns = c.train_error_and_loss()
+            ct, cl, cl_lowest, ns = c.train_error_and_loss(self.model_lowest)
             tot_correct.append(ct * 1.0)
             num_samples.append(ns)
             losses.append(cl * 1.0)
@@ -180,9 +178,9 @@ class Server:
         stats_train = self.train_error_and_loss()
         dissimilarity = self.train_dissimilarity()
 
-        train_diss_1 = sum([torch.norm(dis).numpy() ** 2 for dis in dissimilarity]) / len(self.users)
+        train_diss_1 = sum([torch.norm(dis).cpu().numpy() ** 2 for dis in dissimilarity]) / len(self.users)
         train_diss_2 = torch.norm(
-            sum([dis for dis in dissimilarity]) / len(self.users)).numpy() ** 2
+            sum([dis for dis in dissimilarity]) / len(self.users)).cpu().numpy() ** 2
 
         train_diss = train_diss_1 - train_diss_2
 

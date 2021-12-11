@@ -1,106 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.models as models
-from torchvision.models.resnet import ResNet, BasicBlock
 
-
-# Neural Networks
-
-class MyResNet18(ResNet):
-    def __init__(self, output_dim):
-        super(MyResNet18, self).__init__(BasicBlock, [2, 2, 2, 2], output_dim)
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-
-    def forward(self, x):
-        nb_samples, _ = x.shape
-        x = torch.reshape(x, (nb_samples, 1, 28, 28))
-        x = self._forward_impl(x)
-        return F.log_softmax(x, dim=1)
-
-
-class Net(nn.Module):
-    def __init__(self, output_dim):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, output_dim)
-
-    def forward(self, x):
-        nb_samples, _ = x.shape
-        x = torch.reshape(x, (nb_samples, 1, 28, 28))
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = x.view(-1, 320)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
-
-
-class Net2(nn.Module):
-    def __init__(self, output_dim):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, 2, 1)
-        self.conv2 = nn.Conv2d(16, 32, 2, 1)
-        self.dropout1 = nn.Dropout(0.25)
-        self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(18432, 128)
-        self.fc2 = nn.Linear(128, output_dim)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = nn.ReLU()(x)
-        x = nn.MaxPool2d(2, 1)(x)
-        x = self.dropout1(x)
-        x = self.conv2(x)
-        x = nn.ReLU()(x)
-        x = nn.MaxPool2d(2, 1)(x)
-        x = self.dropout2(x)
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = nn.ReLU()(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
-
-
-class DNN(nn.Module):
-    def __init__(self, input_dim=784, mid_dim=100, output_dim=10):
-        super(DNN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, mid_dim)
-        self.fc2 = nn.Linear(mid_dim, output_dim)
-
-    def forward(self, x):
-        x = torch.flatten(x, 1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = F.log_softmax(x, dim=1)
-        return x
-
-
-class CNN(nn.Module):
-    def __init__(self, output_dim):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4 * 4 * 50, output_dim)
-
-    def forward(self, x):
-        x = torch.reshape(x, (-1, 1, 28, 28))
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4 * 4 * 50)
-        x = self.fc1(x)
-        return F.log_softmax(x, dim=1)
-
-
-# Convex models
 
 class MclrLogistic(nn.Module):
     def __init__(self, input_dim=784, output_dim=10):
@@ -114,12 +15,54 @@ class MclrLogistic(nn.Module):
         return output
 
 
-class MclrCrossEntropy(nn.Module):
+# one hidden layer
+
+class NN1(nn.Module):
     def __init__(self, input_dim=784, output_dim=10):
-        super(MclrCrossEntropy, self).__init__()
-        self.linear = torch.nn.Linear(input_dim, output_dim)
+        super(NN1, self).__init__()
+        self.fc1 = nn.Linear(input_dim, 32)
+        self.fc2 = nn.Linear(32, output_dim)
 
     def forward(self, x):
         x = torch.flatten(x, 1)
-        outputs = self.linear(x)
-        return outputs
+        x = self.fc1(x)
+        x = torch.sigmoid(x)
+        x = self.fc2(x)
+        output = F.log_softmax(x, dim=1)
+        return output
+
+
+class NN1_PCA(nn.Module):
+    def __init__(self, input_dim=60, output_dim=10):
+        super(NN1_PCA, self).__init__()
+        self.fc1 = nn.Linear(input_dim, 200)
+        self.fc2 = nn.Linear(200, output_dim)
+
+    def forward(self, x):
+        x = torch.flatten(x, 1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        output = F.log_softmax(x, dim=1)
+        return output
+
+
+# CNN
+
+class CNN(nn.Module):
+    def __init__(self, output_dim=10, inter_dim=200):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(3, 64, 5, stride=1)
+        self.conv2 = nn.Conv2d(64, 64, 5, stride=1)
+        self.fc1 = nn.Linear(4 * 4 * 64, inter_dim)
+        self.fc2 = nn.Linear(inter_dim, output_dim)
+
+    def forward(self, x):
+        x = torch.reshape(x, (-1, 3, 28, 28))
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 4 * 4* 64)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)

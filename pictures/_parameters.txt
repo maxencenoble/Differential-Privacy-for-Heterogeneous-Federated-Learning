@@ -19,17 +19,7 @@ weight_decay=5e-3
 global_learning_rate=1.0
 max_norm=1.0 (but implemented with heuristic)
 
-LOCAL LEARNING RATE (algorithm)
-DP-SCAFFOLD : 1.0
-DP-FedAvg : 1.0
-SCAFFOLD : 3.0
-FedAvg : 10.0
-
-SIGMA_GAUSSIAN (local_updates) for epsilon=1.5 and delta=1/MR
-K=5 : 78;70
-K=10 : 74.44
-K=20 : 73.11
-
+Use get_epsilon_bound to determine sigma_gaussian !
 ##################################################
 
 dataset=Femnist
@@ -46,20 +36,11 @@ nb_users=40
 user_ratio=0.2
 nb_samples=2500
 sample_ratio=0.2
-local_epochs= 5, 50, 100
+local_updates= 5, 50, 100
 
 weight_decay=5e-3
 
 global_learning_rate=1.0
 max_norm=1.0 (but implemented with heuristic)
 
-LOCAL LEARNING RATE (algorithm)
-DP-SCAFFOLD : 1.0
-DP-FedAvg : 1.0
-SCAFFOLD : 10.0
-FedAvg : 30.0
-
-SIGMA_GAUSSIAN (local_updates) for epsilon=1.5 and delta=1/MR
-K=5 : 24.73
-K=10 : 23.24
-K=20 : 22.77
+Use get_epsilon_bound to determine sigma_gaussian !

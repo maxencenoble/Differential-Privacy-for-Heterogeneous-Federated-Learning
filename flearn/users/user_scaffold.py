@@ -19,9 +19,9 @@ from utils.autograd_hacks import *
 
 class UserSCAFFOLD(User):
     def __init__(self, numeric_id, dataset, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
-                 dp, similarity, times):
+                 dp, similarity, times, use_cuda):
         super().__init__(numeric_id, dataset, train_data, test_data, model[0], sample_ratio, learning_rate, L,
-                         local_updates, dp, similarity,times)
+                         local_updates, dp, similarity,times, use_cuda, model[1])
 
         if model[1] == 'mclr':
             self.loss = nn.NLLLoss()
@@ -48,7 +48,6 @@ class UserSCAFFOLD(User):
 
     def set_first_controls_no_dp(self):
         """Warm start strategy without differential privacy"""
-        self.model.eval()
         grads = [torch.zeros_like(p.data) for p in self.model.parameters() if p.requires_grad]
 
         for epoch in range(1, self.local_updates + 1):
@@ -63,6 +62,9 @@ class UserSCAFFOLD(User):
             self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
             X, y = list(self.trainloader)[0]
+            
+            if self.use_cuda:
+                X, y=X.cuda(), y.cuda()
 
             self.optimizer.zero_grad()
             clear_backprops(self.model)
@@ -80,7 +82,6 @@ class UserSCAFFOLD(User):
 
     def set_first_controls_dp(self, sigma_g, max_norm):
         """Warm start strategy under differential privacy"""
-        self.model.eval()
         grads = [torch.zeros_like(p.data) for p in self.model.parameters() if p.requires_grad]
 
         for epoch in range(1, self.local_updates + 1):
@@ -95,6 +96,9 @@ class UserSCAFFOLD(User):
             self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
             X, y = list(self.trainloader)[0]
+            
+            if self.use_cuda:
+                X, y=X.cuda(), y.cuda()
 
             self.optimizer.zero_grad()
             clear_backprops(self.model)
@@ -113,7 +117,7 @@ class UserSCAFFOLD(User):
                     [grad / max(1, float(grad.data.norm(2)) / max_norm) for grad in p.grad1])
                 p.grad.data = torch.mean(p.grad1, dim=0)
                 # DP mechanism
-                p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size)
+                p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size, self.use_cuda)
 
             self.optimizer.zero_grad()
 
@@ -128,7 +132,6 @@ class UserSCAFFOLD(User):
         """Training phase without differential privacy"""
         # no training during warm start strategy
         if (not warm_start) or glob_iter >= round(4 / user_ratio):
-            self.model.train()
             for epoch in range(1, self.local_updates + 1):
                 self.model.train()
 
@@ -140,6 +143,9 @@ class UserSCAFFOLD(User):
                 self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
                 X, y = list(self.trainloader)[0]
+
+                if self.use_cuda:
+                    X, y = X.cuda(), y.cuda()
 
                 self.optimizer.zero_grad()
                 clear_backprops(self.model)
@@ -179,7 +185,6 @@ class UserSCAFFOLD(User):
     def train_dp(self, sigma_g, glob_iter, user_ratio, max_norm, warm_start, seen, opt=2):
         """Training phase under differential privacy"""
         # no training during warm start strategy
-        self.model.train()
         if (not warm_start) or glob_iter >= round(4 / user_ratio):
             for epoch in range(1, self.local_updates + 1):
                 self.model.train()
@@ -192,6 +197,9 @@ class UserSCAFFOLD(User):
                 self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
                 X, y = list(self.trainloader)[0]
+
+                if self.use_cuda:
+                    X, y = X.cuda(), y.cuda()
 
                 self.optimizer.zero_grad()
                 clear_backprops(self.model)
@@ -209,7 +217,7 @@ class UserSCAFFOLD(User):
                     p.grad1 = torch.stack(
                         [grad / max(1, float(grad.data.norm(2)) / max_norm) for grad in p.grad1])
                     p.grad.data = torch.mean(p.grad1, dim=0)
-                    p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size)
+                    p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size, self.use_cuda)
 
                 self.optimizer.step(self.server_controls, self.controls)
 

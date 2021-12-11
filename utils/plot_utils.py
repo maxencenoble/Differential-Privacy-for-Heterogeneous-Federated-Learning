@@ -29,14 +29,14 @@ def read_from_results(file_name):
 
 
 def get_all_training_data_value(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp,
-                                sigma_gaussian,local_updates, sample_ratio):
+                                sigma_gaussian, local_updates, sample_ratio, model_name):
     train_acc = np.zeros((times, num_glob_iters))
     train_loss = np.zeros((times, num_glob_iters))
     glob_acc = np.zeros((times, num_glob_iters))
     test_loss = np.zeros((times, num_glob_iters))
     train_diss = np.zeros((times, num_glob_iters))
 
-    file_name = "./results/" + dataset + "_" + number + '_' + algorithm
+    file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm
     file_name += "_" + str(similarity) + "s"
     file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
     if dp != "None":
@@ -52,13 +52,13 @@ def get_all_training_data_value(num_glob_iters, algorithm, dataset, times, simil
 
 
 def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp, sigma_gaussian,
-                 local_updates,
-                 sample_ratio, cross_validation=False, k_5=None, local_learning_rate=None):
+                 local_updates, sample_ratio, model_name, cross_validation=False, k_fold=None, nb_fold=None,
+                 local_learning_rate=None):
     glob_acc, train_acc, train_loss, test_loss, train_diss = get_all_training_data_value(
         num_glob_iters, algorithm,
         dataset, times,
         similarity,
-        noise, number, dp, sigma_gaussian, local_updates, sample_ratio)
+        noise, number, dp, sigma_gaussian, local_updates, sample_ratio, model_name)
 
     glob_acc_data = np.average(glob_acc, axis=0)
     train_acc_data = np.average(train_acc, axis=0)
@@ -74,8 +74,8 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
     print("Mean Max Accuracy:", np.mean(mean_test_accuracy))
 
     if cross_validation:
-        assert local_learning_rate is not None and k_5 is not None, "Error on cross validation parameter"
-        file_name = "./results_tuning/" + dataset + '_' + algorithm
+        assert local_learning_rate is not None and k_fold is not None, "Error on cross validation parameter"
+        file_name = "./results_tuning/" + model_name + "/" + dataset + '_' + algorithm
         file_name += "_" + str(similarity) + "s"
         file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
         if dp != "None":
@@ -88,12 +88,13 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         f = open(file_name, "a+")
-        f.write('Hyperparameter : {} - Test Accuracy at round {}/5 : {}\n'.format(local_learning_rate, k_5,
-                                                                                  mean_test_accuracy))
+        f.write(
+            'Hyperparameter : {} - Test Accuracy at round {}/{} : {}\n'.format(local_learning_rate, k_fold + 1, nb_fold,
+                                                                               mean_test_accuracy))
         f.close()
     else:
         # store average value to h5 file
-        file_name = "./results/" + dataset + "_" + number + '_' + algorithm
+        file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm
         file_name += "_" + str(similarity) + "s"
         file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
         if dp != "None":
@@ -114,9 +115,8 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
 
 
 def get_all_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp, sigma_gaussian,
-                  local_updates,
-                  sample_ratio):
-    file_name = "./results/" + dataset + "_" + number + '_' + algorithm + "_norms"
+                  local_updates, sample_ratio, model_name):
+    file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm + "_norms"
     file_name += "_" + str(similarity) + "s"
     file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
     if dp != "None":
@@ -140,10 +140,9 @@ def get_all_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
 
 
 def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp, sigma_gaussian,
-                  local_updates,
-                  sample_ratio):
+                  local_updates, sample_ratio, model_name):
     # store average value to h5 file
-    file_name = "./results/" + dataset + "_" + number + '_' + algorithm + "_norms"
+    file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm + "_norms"
     file_name += "_" + str(similarity) + "s"
     file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
     if dp != "None":
@@ -154,7 +153,8 @@ def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
 
     if algorithm == "SCAFFOLD" or algorithm == "SCAFFOLD-warm":
         param_norms, control_norms = get_all_norms(num_glob_iters, algorithm, dataset, times, similarity,
-                                                   noise, number, dp, sigma_gaussian, local_updates, sample_ratio)
+                                                   noise, number, dp, sigma_gaussian, local_updates, sample_ratio,
+                                                   model_name)
         glob_param_norms = np.average(param_norms, axis=0)
         glob_control_norms = np.average(control_norms, axis=0)
         if len(glob_param_norms) & len(glob_control_norms):
@@ -164,7 +164,7 @@ def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
     else:
         param_norms = get_all_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp,
                                     sigma_gaussian,
-                                    local_updates, sample_ratio)
+                                    local_updates, sample_ratio, model_name)
         glob_param_norms = np.average(param_norms, axis=0)
         if len(glob_param_norms) != 0:
             with h5py.File(file_name, 'w') as hf:
@@ -172,7 +172,8 @@ def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
                 hf.close()
 
 
-def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio, user_ratio):
+def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio,
+               user_ratio, model_name):
     epochs = int(local_updates * sample_ratio)
     colours = ['g', 'orange', 'black', 'purple']
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
@@ -200,7 +201,7 @@ def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian
             j = 0
             for _, algorithm in enumerate(algorithms):
                 for dp in ["None", "Gaussian"]:
-                    file_name = "./results/" + dataset + '_' + number
+                    file_name = "./results/" + model_name + "/" + dataset + '_' + number
                     file_name += "_" + algorithm + "_norms"
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
@@ -249,7 +250,7 @@ def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian
 
 
 def plot_train_dissimilarity(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates,
-                             sample_ratio):
+                             sample_ratio, model_name):
     epochs = int(local_updates * sample_ratio)
     colours = ['g', 'orange', 'black']
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
@@ -275,7 +276,7 @@ def plot_train_dissimilarity(dataset, algorithms, noises, similarities, number, 
         for noise in noises:
             for j, algorithm in enumerate(algorithms):
                 for dp in ["None", "Gaussian"]:
-                    file_name = "./results/" + dataset + '_' + number
+                    file_name = "./results/" + model_name + "/" + dataset + '_' + number
                     file_name += "_" + algorithm
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
@@ -302,7 +303,8 @@ def plot_train_dissimilarity(dataset, algorithms, noises, similarities, number, 
     plt.show()
 
 
-def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio):
+def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio,
+                       model_name):
     epochs = int(local_updates * sample_ratio)
     colours = ['g', 'orange', 'black']
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
@@ -328,7 +330,7 @@ def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_
         for noise in noises:
             for j, algorithm in enumerate(algorithms):
                 for dp in ["None", "Gaussian"]:
-                    file_name = "./results/" + dataset + '_' + number
+                    file_name = "./results/" + model_name + "/" + dataset + '_' + number
                     file_name += "_" + algorithm
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
@@ -356,9 +358,9 @@ def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_
 
 
 def plot_test_accuracy_multiple_K(dataset, algorithms, noises, similarities, number, list_of_sigma_gaussian,
-                                  list_of_local_updates, sample_ratio):
+                                  list_of_local_updates, sample_ratio, model_name):
     list_of_epochs = [int(local_updates * sample_ratio) for local_updates in list_of_local_updates]
-    list_of_linestyle=['dotted','dashed', 'solid']
+    list_of_linestyle = ['dotted', 'dashed', 'solid']
     colours = ['g', 'black']
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
     # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
@@ -383,8 +385,9 @@ def plot_test_accuracy_multiple_K(dataset, algorithms, noises, similarities, num
         for noise in noises:
             for j, algorithm in enumerate(algorithms):
                 for dp in ["Gaussian"]:
-                    for (epochs,sigma_gaussian, linestyle) in list(zip(list_of_epochs,list_of_sigma_gaussian,list_of_linestyle )):
-                        file_name = "./results/" + dataset + '_' + number
+                    for (epochs, sigma_gaussian, linestyle) in list(
+                            zip(list_of_epochs, list_of_sigma_gaussian, list_of_linestyle)):
+                        file_name = "./results/" + model_name + "/" + dataset + '_' + number
                         file_name += "_" + algorithm
                         file_name += "_" + str(similarity) + "s"
                         file_name += "_" + str(epochs) + "K"
@@ -398,13 +401,14 @@ def plot_test_accuracy_multiple_K(dataset, algorithms, noises, similarities, num
                         file_name += "_avg.h5"
                         train_acc, train_loss, glob_acc, test_loss, train_diss = np.array(
                             read_from_results(file_name))[:, :]
-                        str_K=", K={}".format(int(epochs / sample_ratio))
+                        str_K = ", K={}".format(int(epochs / sample_ratio))
                         axs[k].plot(glob_acc, color=color, linestyle=linestyle, label=label + str_K)
                         axs[k].legend(loc="lower right")
     plt.show()
 
 
-def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio):
+def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio,
+                    model_name):
     epochs = int(local_updates * sample_ratio)
     colours = ['g', 'orange', 'black']
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
@@ -434,7 +438,7 @@ def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gau
         for noise in noises:
             for j, algorithm in enumerate(algorithms):
                 for dp in ["None", "Gaussian"]:
-                    file_name = "./results/" + dataset + '_' + number
+                    file_name = "./results/" + model_name + "/" + dataset + '_' + number
                     file_name += "_" + algorithm
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
@@ -464,9 +468,9 @@ def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gau
 
 
 def plot_train_loss_multiple_K(dataset, algorithms, noises, similarities, number, list_of_sigma_gaussian,
-                                  list_of_local_updates, sample_ratio):
+                               list_of_local_updates, sample_ratio, model_name):
     list_of_epochs = [int(local_updates * sample_ratio) for local_updates in list_of_local_updates]
-    list_of_linestyle=['dotted','dashed', 'solid']
+    list_of_linestyle = ['dotted', 'dashed', 'solid']
     colours = ['g', 'black']
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
     # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
@@ -497,12 +501,12 @@ def plot_train_loss_multiple_K(dataset, algorithms, noises, similarities, number
                 for dp in ["Gaussian"]:
                     for (epochs, sigma_gaussian, linestyle) in list(
                             zip(list_of_epochs, list_of_sigma_gaussian, list_of_linestyle)):
-                        file_name = "./results/" + dataset + '_' + number
+                        file_name = "./results/" + model_name + "/" + dataset + '_' + number
                         file_name += "_" + algorithm
                         file_name += "_" + str(similarity) + "s"
                         file_name += "_" + str(epochs) + "K"
                         file_name += "_" + str(sigma_gaussian) + dp
-                        label = "DP-" +algorithm
+                        label = "DP-" + algorithm
                         color = colours[j]
                         if noise:
                             file_name += '_noisy'

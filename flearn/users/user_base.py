@@ -15,13 +15,14 @@ class User:
     """
 
     def __init__(self, user_id, dataset, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
-                 dp, similarity, times):
+                 dp, similarity, times, use_cuda, model_name):
+        self.use_cuda=use_cuda
 
-        model_path = os.path.join("models", dataset)
-        self.model_lowest = torch.load(os.path.join(model_path, "server_lowest_" + str(similarity) + ".pt"))
         self.dataset = None
         self.optimizer = None
         self.model = copy.deepcopy(model)
+        if use_cuda:
+            self.model=self.model.cuda()
         self.user_id = user_id  # integer
         self.train_samples = len(train_data)
         self.test_samples = len(test_data)
@@ -120,20 +121,24 @@ class User:
         test_acc = 0
         loss = 0
         for x, y in self.testloaderfull:
+            if self.use_cuda:
+                x, y = x.cuda(), y.cuda()
             output = self.model(x)
             test_acc += (torch.sum(torch.argmax(output, dim=1) == y)).item()
             loss += self.loss(output, y)
             # print(self.user_id + ", Test Loss:", loss)
         return test_acc, loss, y.shape[0]
 
-    def train_error_and_loss(self):
+    def train_error_and_loss(self, model_lowest):
         self.model.eval()
-        self.model_lowest.eval()
+        model_lowest.eval()
         train_acc = 0
         loss = 0
         loss_lowest = 0
         for x, y in self.trainloaderfull:
-            output_lowest = self.model_lowest(x)
+            if self.use_cuda:
+                x, y = x.cuda(), y.cuda()
+            output_lowest = model_lowest(x)
             loss_lowest += self.loss(output_lowest, y)
 
             output = self.model(x)
@@ -147,6 +152,8 @@ class User:
         self.model.eval()
         gradients = [torch.flatten(torch.zeros_like(p.data)) for p in self.model.parameters()]
         for x, y in self.trainloaderfull:
+            if self.use_cuda:
+                x, y = x.cuda(), y.cuda()
             self.optimizer.zero_grad()
             output = self.model(x)
             loss = self.loss(output, y)
