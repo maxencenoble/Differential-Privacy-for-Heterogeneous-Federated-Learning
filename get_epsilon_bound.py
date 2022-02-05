@@ -22,11 +22,11 @@ delta = 1 / (M * R)
 l = 0.05
 s = 0.2
 
-# sigma_g: standard deviation of Gaussian noise used in the algorithm
-# sigma_gaussian: standard deviation of Gaussian noise "evaluated" for privacy towards a third party
+# sigma_gaussian: standard deviation of Gaussian noise used in the algorithm
+# sigma_g: standard deviation of Gaussian noise "evaluated" for privacy towards a third party
 
-sigma_g = 40.
-sigma_gaussian = sigma_g * np.sqrt(l * M)
+sigma_gaussian = 40.
+sigma_g = sigma_gaussian * np.sqrt(l * M)
 
 
 # The privacy parameter epsilon is calculated for any third party who has access to the last iterate of the algorithm
@@ -42,8 +42,8 @@ def logcomb(n, k):
 
 
 def RDP_epsilon_bound_gaussian(alpha):
-    """Returns the epsilon RDP bound for Gaussian mechanism with std parameter sigma_gaussian"""
-    return 0.5 * alpha / (sigma_gaussian ** 2)
+    """Returns the epsilon RDP bound for Gaussian mechanism with std parameter sigma_g"""
+    return 0.5 * alpha / (sigma_g ** 2)
 
 
 def cgf_subsampling_for_int_alpha(alpha: int, eps_func, sub_ratio):
