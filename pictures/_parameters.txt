@@ -19,7 +19,8 @@ weight_decay=5e-3
 global_learning_rate=1.0
 max_norm=1.0 (but implemented with heuristic)
 
-Use get_epsilon_bound to determine sigma_gaussian !
+sigma_gaussian=60.0
+
 ##################################################
 
 dataset=Femnist
@@ -43,4 +44,4 @@ weight_decay=5e-3
 global_learning_rate=1.0
 max_norm=1.0 (but implemented with heuristic)
 
-Use get_epsilon_bound to determine sigma_gaussian !
+sigma_gaussian=30.0
