@@ -9,9 +9,10 @@ import math
 # R: nb of data points used for training
 
 T = 100
-K = 5
+K = 50
 M = 100
 R = int(0.8 * 5000)
+
 # 0.8 : training ratio
 
 # delta: privacy parameter
@@ -19,14 +20,14 @@ R = int(0.8 * 5000)
 # s: data subsampling ratio
 
 delta = 1 / (M * R)
-l = 0.05
+l = 0.2
 s = 0.2
 
 # sigma_gaussian: standard deviation of Gaussian noise used in the algorithm
 # sigma_g: standard deviation of Gaussian noise "evaluated" for privacy towards a third party
 
-sigma_gaussian = 40.
-sigma_g = sigma_gaussian * np.sqrt(l * M)
+sigma_gaussian = 60.0
+sigma_gaussian_actual = sigma_gaussian * np.sqrt(l * M)
 
 
 # The privacy parameter epsilon is calculated for any third party who has access to the last iterate of the algorithm
@@ -42,8 +43,8 @@ def logcomb(n, k):
 
 
 def RDP_epsilon_bound_gaussian(alpha):
-    """Returns the epsilon RDP bound for Gaussian mechanism with std parameter sigma_g"""
-    return 0.5 * alpha / (sigma_g ** 2)
+    """Returns the epsilon RDP bound for Gaussian mechanism with std parameter sigma_gaussian_actual"""
+    return 0.5 * alpha / (sigma_gaussian_actual ** 2)
 
 
 def cgf_subsampling_for_int_alpha(alpha: int, eps_func, sub_ratio):

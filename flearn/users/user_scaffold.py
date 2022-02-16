@@ -15,13 +15,13 @@ from torch.optim.lr_scheduler import StepLR
 from utils.autograd_hacks import *
 
 
-# Implementation for SCAFFOLD clients
+# Implementation for SCAFFOLD users
 
 class UserSCAFFOLD(User):
-    def __init__(self, numeric_id, dataset, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
-                 dp, similarity, times, use_cuda):
-        super().__init__(numeric_id, dataset, train_data, test_data, model[0], sample_ratio, learning_rate, L,
-                         local_updates, dp, similarity,times, use_cuda, model[1])
+    def __init__(self, numeric_id, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
+                 dp, times, use_cuda):
+        super().__init__(numeric_id, train_data, test_data, model[0], sample_ratio, learning_rate, L,
+                         local_updates, dp, times, use_cuda)
 
         if model[1] == 'mclr':
             self.loss = nn.NLLLoss()
@@ -55,16 +55,16 @@ class UserSCAFFOLD(User):
             self.optimizer.zero_grad()
 
             # new batch (data sampling on every local epoch)
-            np.random.seed(500*(self.times+1) +epoch + 1)
-            torch.manual_seed(500*(self.times+1) +epoch + 1)
+            np.random.seed(500 * (self.times + 1) + epoch + 1)
+            torch.manual_seed(500 * (self.times + 1) + epoch + 1)
             train_idx = np.arange(self.train_samples)
             train_sampler = SubsetRandomSampler(train_idx)
             self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
             X, y = list(self.trainloader)[0]
-            
+
             if self.use_cuda:
-                X, y=X.cuda(), y.cuda()
+                X, y = X.cuda(), y.cuda()
 
             self.optimizer.zero_grad()
             clear_backprops(self.model)
@@ -89,16 +89,16 @@ class UserSCAFFOLD(User):
             self.optimizer.zero_grad()
 
             # new batch (data sampling on every local epoch)
-            np.random.seed(500*(self.times+1) +epoch + 1)
-            torch.manual_seed(500*(self.times+1)+epoch + 1)
+            np.random.seed(500 * (self.times + 1) + epoch + 1)
+            torch.manual_seed(500 * (self.times + 1) + epoch + 1)
             train_idx = np.arange(self.train_samples)
             train_sampler = SubsetRandomSampler(train_idx)
             self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
 
             X, y = list(self.trainloader)[0]
-            
+
             if self.use_cuda:
-                X, y=X.cuda(), y.cuda()
+                X, y = X.cuda(), y.cuda()
 
             self.optimizer.zero_grad()
             clear_backprops(self.model)
@@ -110,7 +110,7 @@ class UserSCAFFOLD(User):
             for p in self.model.parameters():
                 # clipping single gradients
 
-                # heuristic
+                # heuristic: otherwise, use max_norm constant
                 max_norm = np.median([float(grad.data.norm(2)) for grad in p.grad1])
 
                 p.grad1 = torch.stack(
@@ -128,7 +128,7 @@ class UserSCAFFOLD(User):
             control.data = grad / self.local_updates
         self.optimizer.zero_grad()
 
-    def train_no_dp(self, glob_iter, user_ratio, warm_start, seen, opt=2):
+    def train_no_dp(self, glob_iter, user_ratio, warm_start, seen):
         """Training phase without differential privacy"""
         # no training during warm start strategy
         if (not warm_start) or glob_iter >= round(4 / user_ratio):
@@ -136,8 +136,8 @@ class UserSCAFFOLD(User):
                 self.model.train()
 
                 # new batch (data sampling on every local epoch)
-                np.random.seed(500*(self.times+1)* (glob_iter + 1) + epoch + 1)
-                torch.manual_seed(500*(self.times+1)* (glob_iter + 1) + epoch + 1)
+                np.random.seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
+                torch.manual_seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
                 train_idx = np.arange(self.train_samples)
                 train_sampler = SubsetRandomSampler(train_idx)
                 self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
@@ -161,13 +161,12 @@ class UserSCAFFOLD(User):
         for local, server, delta in zip(self.model.parameters(), self.server_model, self.delta_model):
             delta.data = local.data.detach() - server.data.detach()
 
-        # get client new controls
+        # get user new controls
         new_controls = [torch.zeros_like(p.data) for p in self.model.parameters() if p.requires_grad]
-        if opt == 2:
-            for server_control, control, new_control, delta in zip(self.server_controls, self.controls, new_controls,
-                                                                   self.delta_model):
-                a = self.sample_ratio / (self.local_updates * self.learning_rate)
-                new_control.data = control.data - server_control.data - delta.data * a
+        for server_control, control, new_control, delta in zip(self.server_controls, self.controls, new_controls,
+                                                               self.delta_model):
+            a = self.sample_ratio / (self.local_updates * self.learning_rate)
+            new_control.data = control.data - server_control.data - delta.data * a
 
         # get controls differences
         for control, new_control, delta in zip(self.controls, new_controls, self.delta_controls):
@@ -182,7 +181,7 @@ class UserSCAFFOLD(User):
 
         return 0
 
-    def train_dp(self, sigma_g, glob_iter, user_ratio, max_norm, warm_start, seen, opt=2):
+    def train_dp(self, sigma_g, glob_iter, user_ratio, max_norm, warm_start, seen):
         """Training phase under differential privacy"""
         # no training during warm start strategy
         if (not warm_start) or glob_iter >= round(4 / user_ratio):
@@ -190,8 +189,8 @@ class UserSCAFFOLD(User):
                 self.model.train()
 
                 # new batch (data sampling on every local epoch)
-                np.random.seed(500*(self.times+1) * (glob_iter + 1) + epoch + 1)
-                torch.manual_seed(500*(self.times+1)* (glob_iter + 1) + epoch + 1)
+                np.random.seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
+                torch.manual_seed(500 * (self.times + 1) * (glob_iter + 1) + epoch + 1)
                 train_idx = np.arange(self.train_samples)
                 train_sampler = SubsetRandomSampler(train_idx)
                 self.trainloader = DataLoader(self.train_data, self.batch_size, sampler=train_sampler)
@@ -211,12 +210,13 @@ class UserSCAFFOLD(User):
                 for p in self.model.parameters():
                     # clipping single gradients
 
-                    # heuristic
+                    # heuristic: otherwise, use max_norm constant
                     max_norm = np.median([float(grad.data.norm(2)) for grad in p.grad1])
 
                     p.grad1 = torch.stack(
                         [grad / max(1, float(grad.data.norm(2)) / max_norm) for grad in p.grad1])
                     p.grad.data = torch.mean(p.grad1, dim=0)
+                    # DP mechanism
                     p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size, self.use_cuda)
 
                 self.optimizer.step(self.server_controls, self.controls)
@@ -228,13 +228,12 @@ class UserSCAFFOLD(User):
         for local, server, delta in zip(self.model.parameters(), self.server_model, self.delta_model):
             delta.data = local.data.detach() - server.data.detach()
 
-        # get client new controls
+        # get user new controls
         new_controls = [torch.zeros_like(p.data) for p in self.model.parameters() if p.requires_grad]
-        if opt == 2:
-            for server_control, control, new_control, delta in zip(self.server_controls, self.controls, new_controls,
-                                                                   self.delta_model):
-                a = 1 / (self.local_updates * self.learning_rate)
-                new_control.data = control.data - server_control.data - delta.data * a
+        for server_control, control, new_control, delta in zip(self.server_controls, self.controls, new_controls,
+                                                               self.delta_model):
+            a = 1 / (self.local_updates * self.learning_rate)
+            new_control.data = control.data - server_control.data - delta.data * a
 
         # get controls differences
         for control, new_control, delta in zip(self.controls, new_controls, self.delta_controls):
@@ -250,6 +249,7 @@ class UserSCAFFOLD(User):
         return 0
 
     def get_params_norm(self):
+        """Returns (||x_user^t+1 -x_server^t||,||c_user^t+1 -c_server^t||)."""
         params = []
         controls = []
 

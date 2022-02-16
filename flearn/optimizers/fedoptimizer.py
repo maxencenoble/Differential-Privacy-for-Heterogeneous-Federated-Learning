@@ -32,11 +32,11 @@ class SCAFFOLDOptimizer(FedLOptimizer):
     def __init__(self, params, lr, weight_decay):
         super().__init__(params, lr, weight_decay)
 
-    def step(self, server_controls, client_controls, closure=None):
+    def step(self, server_controls, user_controls, closure=None):
         loss = None
         if closure is not None:
             loss = closure
-        for group, c, ci in zip(self.param_groups, server_controls, client_controls):
+        for group, c, ci in zip(self.param_groups, server_controls, user_controls):
             for p in group['params']:
                 if p.grad is None:
                     continue

@@ -4,24 +4,25 @@ import os
 import torch
 import torch.nn as nn
 
-def read_data(dataset, number, similarity, dim_pca=None):
-    '''parses data in given train and test data directories
 
-    assumes:
+def read_data(dataset, number, similarity, dim_pca=None):
+    """Parses data in given train and test data directories
+
+    Assumes:
     - the data in the input directories are .json files with 
         keys 'users' and 'user_data'
     - the set of train set users is the same as the set of test set users
 
-    Return:
-        clients: list of client ids
+    Returns:
+        users: list of user ids
         groups: list of group ids; empty list if none found
         train_data: dictionary of train data
         test_data: dictionary of test data
-    '''
+    """
 
     train_data_dir = os.path.join('data', dataset, 'data', 'train')
     test_data_dir = os.path.join('data', dataset, 'data', 'test')
-    clients = []
+    users = []
     groups = []
     train_data = {}
     test_data = {}
@@ -36,7 +37,7 @@ def read_data(dataset, number, similarity, dim_pca=None):
         file_path = os.path.join(train_data_dir, f)
         with open(file_path, 'r') as inf:
             cdata = json.load(inf)
-        clients.extend(cdata['users'])
+        users.extend(cdata['users'])
         if 'hierarchies' in cdata:
             groups.extend(cdata['hierarchies'])
         train_data.update(cdata['user_data'])
@@ -53,29 +54,29 @@ def read_data(dataset, number, similarity, dim_pca=None):
             cdata = json.load(inf)
         test_data.update(cdata['user_data'])
 
-    clients = list(sorted(train_data.keys()))
+    users = list(sorted(train_data.keys()))
 
-    return clients, groups, train_data, test_data
+    return users, groups, train_data, test_data
 
 
-def read_data_cross_validation(dataset, number, similarity, k_fold,nb_fold, dim_pca):
+def read_data_cross_validation(dataset, number, similarity, k_fold, nb_fold, dim_pca):
     assert k_fold in np.arange(nb_fold), "Index of cross validation not correct"
 
-    '''parses data in given train directories to conduct cross validation
+    """Parses data in given train directories to conduct cross validation
 
-    assumes:
+    Assumes:
     - the data in the input directories are .json files with
         keys 'users' and 'user_data'
     - the set of train set users is the same as the set of test set users
 
-    Return:
-        clients: list of client ids
+    Returns:
+        users: list of user ids
         groups: list of group ids; empty list if none found
         train_data: dictionary of train data
         test_data: dictionary of test data
-    '''
+    """
     train_data_dir = os.path.join('data', dataset, 'data', 'train')
-    clients = []
+    users = []
     groups = []
     all_data = {}
     train_data = {}
@@ -93,16 +94,16 @@ def read_data_cross_validation(dataset, number, similarity, k_fold,nb_fold, dim_
         file_path = os.path.join(train_data_dir, f)
         with open(file_path, 'r') as inf:
             cdata = json.load(inf)
-        clients.extend(cdata['users'])
+        users.extend(cdata['users'])
         if 'hierarchies' in cdata:
             groups.extend(cdata['hierarchies'])
         all_data.update(cdata['user_data'])
 
-    clients = list(sorted(all_data.keys()))
-    train_len = len(all_data[clients[0]]['x'])
+    users = list(sorted(all_data.keys()))
+    train_len = len(all_data[users[0]]['x'])
 
-    for index in range(len(clients)):
-        id = clients[index]
+    for index in range(len(users)):
+        id = users[index]
         train_data[id] = {
             'x': all_data[id]['x'][:round(k_fold * train_len / nb_fold)] + all_data[id]['x'][
                                                                            round((k_fold + 1) * train_len / nb_fold):],
@@ -112,10 +113,15 @@ def read_data_cross_validation(dataset, number, similarity, k_fold,nb_fold, dim_
             'x': all_data[id]['x'][round(k_fold * train_len / nb_fold):round((k_fold + 1) * train_len / nb_fold)],
             'y': all_data[id]['y'][round(k_fold * train_len / nb_fold):round((k_fold + 1) * train_len / nb_fold)]}
 
-    return clients, groups, train_data, test_data
+    return users, groups, train_data, test_data
 
 
 def read_user_data(index, data, dataset):
+    """Returns:
+        id: id of user
+        train_data: list of (data, labels) for training
+        test_data: list of (data, labels) for testing
+    """
     id = data[0][index]
     train_data = data[2][id]
     test_data = data[3][id]
@@ -126,7 +132,7 @@ def read_user_data(index, data, dataset):
         X_test = torch.Tensor(X_test).view(-1, 3, 32, 32).type(torch.float32)
         y_test = torch.Tensor(y_test).type(torch.int64)
     else:
-        # image flatten
+        # image flattened for FEMNIST, MNIST
         X_train = torch.Tensor(X_train).type(torch.float32)
         y_train = torch.Tensor(y_train).type(torch.int64)
         X_test = torch.Tensor(X_test).type(torch.float32)

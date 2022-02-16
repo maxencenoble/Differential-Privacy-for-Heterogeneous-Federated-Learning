@@ -60,6 +60,10 @@ def generate_data(similarity, num_users=100, num_samples=20, ratio_training=0.8,
     for user in range(num_users):
         labels = np.random.randint(0, num_of_labels, iid_samples)
         for label in labels:
+            # to prevent filling problems in case of similarity 1.0
+            while idx[label] == 6000:
+                label += 1
+                label %= 10
             X[user].append(emnist_data[label][idx[label]].tolist())
             y[user] += (label * np.ones(1)).tolist()
             idx[label] += 1
@@ -186,6 +190,10 @@ def generate_pca_data(similarity, dim_pca=60, num_users=100, num_samples=20, rat
     for user in range(num_users):
         labels = np.random.randint(0, num_of_labels, iid_samples)
         for label in labels:
+            # to prevent filling problems in case of similarity 1.0
+            while idx[label] == 6000:
+                label += 1
+                label %= 10
             X[user].append(emnist_data[label][idx[label]].tolist())
             y[user] += (label * np.ones(1)).tolist()
             idx[label] += 1

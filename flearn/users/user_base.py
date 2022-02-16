@@ -9,20 +9,18 @@ import numpy as np
 import copy
 
 
+# Super class for the user settings (either FedAvg/FedSGD or SCAFFOLD)
+
 class User:
-    """
-    Base class for users in federated learning.
-    """
 
-    def __init__(self, user_id, dataset, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
-                 dp, similarity, times, use_cuda, model_name):
-        self.use_cuda=use_cuda
+    def __init__(self, user_id, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
+                 dp, times, use_cuda):
+        self.use_cuda = use_cuda
 
-        self.dataset = None
         self.optimizer = None
         self.model = copy.deepcopy(model)
         if use_cuda:
-            self.model=self.model.cuda()
+            self.model = self.model.cuda()
         self.user_id = user_id  # integer
         self.train_samples = len(train_data)
         self.test_samples = len(test_data)
@@ -117,6 +115,7 @@ class User:
         return grads
 
     def test_error_and_loss(self):
+        """Returns metrics evaluated on test data."""
         self.model.eval()
         test_acc = 0
         loss = 0
@@ -130,6 +129,7 @@ class User:
         return test_acc, loss, y.shape[0]
 
     def train_error_and_loss(self, model_lowest):
+        """Returns metrics evaluated on train data."""
         self.model.eval()
         model_lowest.eval()
         train_acc = 0
@@ -149,6 +149,7 @@ class User:
         return train_acc, loss, loss_lowest, self.train_samples
 
     def train_dissimilarity(self):
+        """Returns gradients for gradient dissimilarity."""
         self.model.eval()
         gradients = [torch.flatten(torch.zeros_like(p.data)) for p in self.model.parameters()]
         for x, y in self.trainloaderfull:
@@ -165,7 +166,7 @@ class User:
 
     def get_next_train_batch(self):
         try:
-            # Samples a new batch for persionalizing
+            # Samples a new batch for personalizing
             (X, y) = next(self.iter_trainloader)
         except StopIteration:
             # restart the generator if the previous generator is exhausted.
@@ -175,27 +176,13 @@ class User:
 
     def get_next_test_batch(self):
         try:
-            # Samples a new batch for persionalizing
+            # Samples a new batch for personalizing
             (X, y) = next(self.iter_testloader)
         except StopIteration:
             # restart the generator if the previous generator is exhausted.
             self.iter_testloader = iter(self.testloader)
             (X, y) = next(self.iter_testloader)
         return (X, y)
-
-    def save_model(self):
-        model_path = os.path.join("models", self.dataset)
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        torch.save(self.model, os.path.join(model_path, "user_" + self.user_id + ".pt"))
-
-    def load_model(self):
-        model_path = os.path.join("models", self.dataset)
-        self.model = torch.load(os.path.join(model_path, "server" + ".pt"))
-
-    @staticmethod
-    def model_exists():
-        return os.path.exists(os.path.join("models", "server" + ".pt"))
 
     def drop_lr(self):
         for group in self.optimizer.param_groups:

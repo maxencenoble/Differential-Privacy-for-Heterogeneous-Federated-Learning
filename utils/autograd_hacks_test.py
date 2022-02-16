@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 import autograd_hacks
 
+# For more information, see https://github.com/cybertronai/autograd-hacks
 
 # Lenet-5 from https://github.com/pytorch/examples/blob/master/mnist/main.py
 class Net(nn.Module):

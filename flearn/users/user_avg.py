@@ -14,13 +14,13 @@ from torch.optim.lr_scheduler import StepLR
 from utils.autograd_hacks import *
 
 
-# Implementation for FedAvg clients
+# Implementation for FedAvg users
 
 class UserAVG(User):
-    def __init__(self, numeric_id, dataset, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
-                 dp, similarity, times, use_cuda):
-        super().__init__(numeric_id, dataset, train_data, test_data, model[0], sample_ratio, learning_rate, L,
-                         local_updates, dp, similarity, times, use_cuda, model[1])
+    def __init__(self, numeric_id, train_data, test_data, model, sample_ratio, learning_rate, L, local_updates,
+                 dp, times, use_cuda):
+        super().__init__(numeric_id, train_data, test_data, model[0], sample_ratio, learning_rate, L,
+                         local_updates, dp, times, use_cuda)
 
         if model[1] == 'mclr':
             self.loss = nn.NLLLoss()
@@ -103,12 +103,13 @@ class UserAVG(User):
             for p in self.model.parameters():
                 # clipping single gradients
 
-                # heuristic
+                # heuristic: otherwise, use max_norm constant
                 max_norm = np.median([float(grad.data.norm(2)) for grad in p.grad1])
 
                 p.grad1 = torch.stack(
                     [grad / max(1, float(grad.data.norm(2)) / max_norm) for grad in p.grad1])
                 p.grad.data = torch.mean(p.grad1, dim=0)
+                # DP mechanism
                 p.grad.data = GaussianMechanism(p.grad.data, sigma_g, max_norm, self.batch_size, self.use_cuda)
 
             self.optimizer.step()
@@ -123,6 +124,7 @@ class UserAVG(User):
         return 0
 
     def get_params_norm(self):
+        """Returns ||x_user^t+1 -x_server^t||."""
         params = []
         for delta in self.delta_model:
             params.append(torch.flatten(delta.data))

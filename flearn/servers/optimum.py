@@ -29,8 +29,9 @@ class Optim:
         self.model_name = model[1]
         self.use_cuda = use_cuda
 
+        # using PCA or not
         if model[1][-3:] != "PCA":
-            dim_pca=None
+            dim_pca = None
 
         if model[1] == 'mclr':
             self.loss = nn.NLLLoss()
@@ -38,10 +39,10 @@ class Optim:
         else:
             self.loss = nn.CrossEntropyLoss()
             self.optimizer = Adam(self.model.parameters())
-            #self.optimizer = Adam(self.model.parameters(), lr=self.learning_rate)
+            # self.optimizer = Adam(self.model.parameters(), lr=self.learning_rate)
 
         # Initialize data
-        
+
         data = read_data(dataset, self.number, str(self.similarity), dim_pca)
         total_users = len(data[0])
         self.train_dataset = []
@@ -55,6 +56,7 @@ class Optim:
         random.shuffle(self.train_dataset)
         random.shuffle(self.test_dataset)
 
+        # TO CHANGE
         self.batch_size = 500
         self.epochs = 800
 
@@ -64,7 +66,7 @@ class Optim:
         self.log_interval = round(len(self.train_loader.dataset) / (6 * self.batch_size))
 
     def train(self):
-        lowest_loss = 1e3
+        lowest_loss = np.inf
         for epoch in range(int(self.epochs)):
             self.model.train()
 
@@ -118,6 +120,8 @@ class Optim:
             print("TEST : Epoch: {}. Loss: {}. Accuracy: {}.".format(epoch, all_loss, accuracy))
 
     def save_model(self):
+        """Used to save the model considered as the best model in a centralised setting.
+        This model is then used as the reference model in the FL setting."""
         model_path = os.path.join("models", self.dataset, self.model_name)
         if not os.path.exists(model_path):
             os.makedirs(model_path)

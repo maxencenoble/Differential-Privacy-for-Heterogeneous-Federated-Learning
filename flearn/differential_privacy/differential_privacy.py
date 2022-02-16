@@ -3,7 +3,7 @@ import numpy as np
 
 
 def GaussianMechanism(grad_tensor, sigma_g, max_norm, batch_size, use_cuda):
-    """adds Gaussian noise to stochastic gradients
+    """ Adds Gaussian noise to per-sample stochastic gradients.
     :param grad_tensor : stands for a stochastic gradient
     :param sigma_g : variance of the Gaussian noise (defined by DP theory)
     :param max_norm : clipping value

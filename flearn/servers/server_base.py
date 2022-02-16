@@ -7,6 +7,8 @@ from scipy.stats import rayleigh
 from scipy import optimize
 
 
+# Super class for the server settings (either FedAvg/FedSGD or SCAFFOLD)
+
 class Server:
     def __init__(self, dataset, algorithm, model, nb_users, nb_samples, user_ratio, sample_ratio, L, max_norm,
                  num_glob_iters, local_updates, users_per_round, similarity, noise, times, dp, sigma_gaussian, number,
@@ -24,14 +26,13 @@ class Server:
         self.user_ratio = user_ratio
         self.sample_ratio = sample_ratio
         self.global_learning_rate = 1.0
-        # self.global_learning_rate = np.sqrt(users_per_round)
         self.total_train_samples = 0
         self.model = copy.deepcopy(model)
         if use_cuda:
             self.model = self.model.cuda()
         self.model_lowest = torch.load(os.path.join(model_path, "server_lowest_" + str(similarity) + ".pt"))
         if use_cuda:
-            self.model_lowest=self.model_lowest.cuda()
+            self.model_lowest = self.model_lowest.cuda()
 
         self.dim_model = sum([torch.flatten(p.data).size().numel() for p in self.model.parameters()])
         self.users = []
@@ -44,7 +45,6 @@ class Server:
 
         self.dp = dp
         self.sigma_g = sigma_gaussian
-        self.delta_target = 1 / (nb_users * nb_samples)
         self.T = num_glob_iters
 
         self.times = times
@@ -55,6 +55,7 @@ class Server:
         self.control_norms = None
 
     def send_parameters(self):
+        """Users setting their parameters from the server."""
         assert (self.users is not None and len(self.users) > 0)
         for user in self.users:
             user.set_parameters(self.model)
@@ -75,6 +76,7 @@ class Server:
             os.path.join("models", self.dataset, self.model_name, "server_" + str(self.similarity) + ".pt"))
 
     def select_users(self, round, users_per_round):
+        """Selecting the users at each round"""
         if users_per_round in [len(self.users), 0]:
             return self.users
 
@@ -92,14 +94,16 @@ class Server:
         return transmitting_users
 
     def save_results(self):
-        """ Save loss, accuracy... to h5 file"""
+        """ Save loss (train and test), accuracy (train and test), dissimilarity (train) to h5 file"""
         model_path = os.path.join("./results", self.model_name)
         if not os.path.exists(model_path):
             os.makedirs(model_path)
 
         file_name = model_path + "/" + self.dataset + "_" + self.number + '_' + self.algorithm
         file_name += "_" + str(self.similarity) + "s"
-        file_name += "_" + str(int(self.local_updates * self.sample_ratio)) + "K"
+        file_name += "_" + str(self.local_updates) + "K"
+        file_name += "_" + str(self.sample_ratio) + "sr"
+        file_name += "_" + str(self.user_ratio) + "ur"
         if self.dp != "None":
             file_name += "_" + str(self.sigma_g) + self.dp
         if self.noise:
@@ -115,13 +119,15 @@ class Server:
                 hf.create_dataset('rs_train_diss', data=self.rs_train_diss)
 
     def save_norms(self):
-        """ Save norms, to h5 file"""
+        """ Save norms to h5 file"""
         model_path = os.path.join("./results", self.model_name)
         if not os.path.exists(model_path):
             os.makedirs(model_path)
         file_name = model_path + "/" + self.dataset + "_" + self.number + '_' + self.algorithm + '_norms'
         file_name += "_" + str(self.similarity) + "s"
-        file_name += "_" + str(int(self.local_updates * self.sample_ratio)) + "K"
+        file_name += "_" + str(self.local_updates) + "K"
+        file_name += "_" + str(self.sample_ratio) + "sr"
+        file_name += "_" + str(self.user_ratio) + "ur"
         if self.dp != "None":
             file_name += "_" + str(self.sigma_g) + self.dp
         if self.noise:
@@ -162,7 +168,7 @@ class Server:
             losses_diff.append((cl - cl_lowest) * 1.0)
 
         ids = [c.user_id for c in self.users]
-        # groups = [c.group for c in self.clients]
+        # groups = [c.group for c in self.users]
 
         return ids, num_samples, tot_correct, losses, losses_diff
 
@@ -174,6 +180,7 @@ class Server:
         return dissimilarities
 
     def evaluate(self):
+        """Saves the metrics at the beginning of each communication round."""
         stats_test = self.test_error_and_loss()
         stats_train = self.train_error_and_loss()
         dissimilarity = self.train_dissimilarity()

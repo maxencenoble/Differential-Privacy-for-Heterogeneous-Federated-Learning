@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import matplotlib
 import h5py
 import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
@@ -29,7 +28,8 @@ def read_from_results(file_name):
 
 
 def get_all_training_data_value(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp,
-                                sigma_gaussian, local_updates, sample_ratio, model_name):
+                                sigma_gaussian, local_updates, sample_ratio, user_ratio, model_name):
+    """Gets the results calculated during training, testing or CV phases."""
     train_acc = np.zeros((times, num_glob_iters))
     train_loss = np.zeros((times, num_glob_iters))
     glob_acc = np.zeros((times, num_glob_iters))
@@ -38,7 +38,9 @@ def get_all_training_data_value(num_glob_iters, algorithm, dataset, times, simil
 
     file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm
     file_name += "_" + str(similarity) + "s"
-    file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
+    file_name += "_" + str(local_updates) + "K"
+    file_name += "_" + str(sample_ratio) + "sr"
+    file_name += "_" + str(user_ratio) + "ur"
     if dp != "None":
         file_name += "_" + str(sigma_gaussian) + dp
     if noise:
@@ -52,13 +54,12 @@ def get_all_training_data_value(num_glob_iters, algorithm, dataset, times, simil
 
 
 def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp, sigma_gaussian,
-                 local_updates, sample_ratio, model_name, cross_validation=False, k_fold=None, nb_fold=None,
+                 local_updates, sample_ratio, user_ratio, model_name, cross_validation=False, k_fold=None, nb_fold=None,
                  local_learning_rate=None):
+    """Calculates and stores the average metrics from the various runs (training and CV)."""
     glob_acc, train_acc, train_loss, test_loss, train_diss = get_all_training_data_value(
-        num_glob_iters, algorithm,
-        dataset, times,
-        similarity,
-        noise, number, dp, sigma_gaussian, local_updates, sample_ratio, model_name)
+        num_glob_iters, algorithm, dataset, times,
+        similarity, noise, number, dp, sigma_gaussian, local_updates, sample_ratio, user_ratio, model_name)
 
     glob_acc_data = np.average(glob_acc, axis=0)
     train_acc_data = np.average(train_acc, axis=0)
@@ -69,7 +70,7 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
     max_accuracy = []
     for i in range(times):
         max_accuracy.append(glob_acc[i].max())
-    print("std Max Accuracy:", np.std(max_accuracy))
+    print("Std Max Accuracy:", np.std(max_accuracy))
     mean_test_accuracy = np.mean(max_accuracy)
     print("Mean Max Accuracy:", np.mean(mean_test_accuracy))
 
@@ -77,7 +78,9 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
         assert local_learning_rate is not None and k_fold is not None, "Error on cross validation parameter"
         file_name = "./results_tuning/" + model_name + "/" + dataset + '_' + algorithm
         file_name += "_" + str(similarity) + "s"
-        file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
+        file_name += "_" + str(local_updates) + "K"
+        file_name += "_" + str(sample_ratio) + "sr"
+        file_name += "_" + str(user_ratio) + "ur"
         if dp != "None":
             file_name += "_" + str(sigma_gaussian) + dp
         if noise:
@@ -96,7 +99,9 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
         # store average value to h5 file
         file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm
         file_name += "_" + str(similarity) + "s"
-        file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
+        file_name += "_" + str(local_updates) + "K"
+        file_name += "_" + str(sample_ratio) + "sr"
+        file_name += "_" + str(user_ratio) + "ur"
         if dp != "None":
             file_name += "_" + str(sigma_gaussian) + dp
         if noise:
@@ -115,10 +120,13 @@ def average_data(num_glob_iters, algorithm, dataset, times, similarity, noise, n
 
 
 def get_all_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp, sigma_gaussian,
-                  local_updates, sample_ratio, model_name):
+                  local_updates, sample_ratio, user_ratio, model_name):
+    """Gets the results calculated during training, testing or CV phases."""
     file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm + "_norms"
     file_name += "_" + str(similarity) + "s"
-    file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
+    file_name += "_" + str(local_updates) + "K"
+    file_name += "_" + str(sample_ratio) + "sr"
+    file_name += "_" + str(user_ratio) + "ur"
     if dp != "None":
         file_name += "_" + str(sigma_gaussian) + dp
     if noise:
@@ -140,11 +148,14 @@ def get_all_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
 
 
 def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp, sigma_gaussian,
-                  local_updates, sample_ratio, model_name):
+                  local_updates, sample_ratio, user_ratio, model_name):
+    """Calculates and stores the average norm metrics from the various runs (training and CV)."""
     # store average value to h5 file
     file_name = "./results/" + model_name + "/" + dataset + "_" + number + '_' + algorithm + "_norms"
     file_name += "_" + str(similarity) + "s"
-    file_name += "_" + str(int(local_updates * sample_ratio)) + "K"
+    file_name += "_" + str(local_updates) + "K"
+    file_name += "_" + str(sample_ratio) + "sr"
+    file_name += "_" + str(user_ratio) + "ur"
     if dp != "None":
         file_name += "_" + str(sigma_gaussian) + dp
     if noise:
@@ -154,7 +165,7 @@ def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
     if algorithm == "SCAFFOLD" or algorithm == "SCAFFOLD-warm":
         param_norms, control_norms = get_all_norms(num_glob_iters, algorithm, dataset, times, similarity,
                                                    noise, number, dp, sigma_gaussian, local_updates, sample_ratio,
-                                                   model_name)
+                                                   user_ratio, model_name)
         glob_param_norms = np.average(param_norms, axis=0)
         glob_control_norms = np.average(control_norms, axis=0)
         if len(glob_param_norms) & len(glob_control_norms):
@@ -164,7 +175,7 @@ def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
     else:
         param_norms = get_all_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, number, dp,
                                     sigma_gaussian,
-                                    local_updates, sample_ratio, model_name)
+                                    local_updates, sample_ratio, user_ratio, model_name)
         glob_param_norms = np.average(param_norms, axis=0)
         if len(glob_param_norms) != 0:
             with h5py.File(file_name, 'w') as hf:
@@ -172,12 +183,29 @@ def average_norms(num_glob_iters, algorithm, dataset, times, similarity, noise, 
                 hf.close()
 
 
+# PLOT FUNCTIONS: may be changed depending on the need
+
 def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio,
                user_ratio, model_name):
-    epochs = int(local_updates * sample_ratio)
-    colours = ['g', 'orange', 'black', 'purple']
+    """
+    Plots the max_norm metric for DP and no DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, on per subplot/col
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - user_ratio
+    - model_name
+    """
+    colours = ['g', 'orange', 'black', 'purple']  # size >= size of algorithms
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
-    # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
 
     if len(similarities) == 1:
         axs = [axs]
@@ -205,9 +233,11 @@ def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian
                     file_name += "_" + algorithm + "_norms"
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
-                        file_name += "_1K"
+                        file_name += "_" + str(int(1 / sample_ratio)) + "K"
                     else:
-                        file_name += "_" + str(epochs) + "K"
+                        file_name += "_" + str(local_updates) + "K"
+                    file_name += "_" + str(sample_ratio) + "sr"
+                    file_name += "_" + str(user_ratio) + "ur"
                     if dp != "None":
                         file_name += "_" + str(sigma_gaussian) + dp
                     label = algorithm
@@ -250,11 +280,26 @@ def plot_norms(dataset, algorithms, noises, similarities, number, sigma_gaussian
 
 
 def plot_train_dissimilarity(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates,
-                             sample_ratio, model_name):
-    epochs = int(local_updates * sample_ratio)
-    colours = ['g', 'orange', 'black']
+                             sample_ratio, user_ratio, model_name):
+    """
+    Plots the train dissimilarity metric for DP and no DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, on per subplot/col
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - user_ratio
+    - model_name
+    """
+    colours = ['orange', 'black']  # size = size of algorithms
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
-    # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
 
     if len(similarities) == 1:
         axs = [axs]
@@ -280,9 +325,11 @@ def plot_train_dissimilarity(dataset, algorithms, noises, similarities, number, 
                     file_name += "_" + algorithm
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
-                        file_name += "_1K"
+                        file_name += "_" + str(int(1 / sample_ratio)) + "K"
                     else:
-                        file_name += "_" + str(epochs) + "K"
+                        file_name += "_" + str(local_updates) + "K"
+                    file_name += "_" + str(sample_ratio) + "sr"
+                    file_name += "_" + str(user_ratio) + "ur"
                     if dp != "None":
                         file_name += "_" + str(sigma_gaussian) + dp
                     label = algorithm
@@ -304,11 +351,27 @@ def plot_train_dissimilarity(dataset, algorithms, noises, similarities, number, 
 
 
 def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio,
-                       model_name):
-    epochs = int(local_updates * sample_ratio)
-    colours = ['g', 'orange', 'black']
+                       user_ratio, model_name):
+    """
+    Plots the test accuracy metric for DP and no DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, on per subplot/col
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - user_ratio
+    - model_name
+    """
+
+    colours = ['orange', 'black']  # size = size of algorithms
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
-    # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
 
     if len(similarities) == 1:
         axs = [axs]
@@ -334,9 +397,11 @@ def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_
                     file_name += "_" + algorithm
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
-                        file_name += "_1K"
+                        file_name += "_" + str(int(1 / sample_ratio)) + "K"
                     else:
-                        file_name += "_" + str(epochs) + "K"
+                        file_name += "_" + str(local_updates) + "K"
+                    file_name += "_" + str(sample_ratio) + "sr"
+                    file_name += "_" + str(user_ratio) + "ur"
                     if dp != "None":
                         file_name += "_" + str(sigma_gaussian) + dp
                     label = algorithm
@@ -357,62 +422,28 @@ def plot_test_accuracy(dataset, algorithms, noises, similarities, number, sigma_
     plt.show()
 
 
-def plot_test_accuracy_multiple_K(dataset, algorithms, noises, similarities, number, list_of_sigma_gaussian,
-                                  list_of_local_updates, sample_ratio, model_name):
-    list_of_epochs = [int(local_updates * sample_ratio) for local_updates in list_of_local_updates]
-    list_of_linestyle = ['dotted', 'dashed', 'solid']
-    colours = ['g', 'black']
-    fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
-    # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
-
-    if len(similarities) == 1:
-        axs = [axs]
-
-    for k, similarity in enumerate(similarities):
-        axs[k].set_xlabel("Nb of communication rounds")
-        axs[k].set_ylabel("Test Accuracy over all users")
-        axs[k].grid()
-        if np.size(similarity) < 2:
-            axs[k].set_title(str(100 * similarity) + "% Similarity")
-        else:
-            alpha, beta = similarity
-            if alpha < 0 and beta < 0:
-                similarity = "iid"
-                axs[k].set_title("IID data")
-            else:
-                axs[k].set_title("(alpha, beta) = " + str(similarity))
-
-        for noise in noises:
-            for j, algorithm in enumerate(algorithms):
-                for dp in ["Gaussian"]:
-                    for (epochs, sigma_gaussian, linestyle) in list(
-                            zip(list_of_epochs, list_of_sigma_gaussian, list_of_linestyle)):
-                        file_name = "./results/" + model_name + "/" + dataset + '_' + number
-                        file_name += "_" + algorithm
-                        file_name += "_" + str(similarity) + "s"
-                        file_name += "_" + str(epochs) + "K"
-                        file_name += "_" + str(sigma_gaussian) + dp
-                        label = "DP-" + algorithm
-                        color = colours[j]
-                        if noise:
-                            file_name += '_noisy'
-                            label += ' with noise'
-                            color += ':'
-                        file_name += "_avg.h5"
-                        train_acc, train_loss, glob_acc, test_loss, train_diss = np.array(
-                            read_from_results(file_name))[:, :]
-                        str_K = ", K={}".format(int(epochs / sample_ratio))
-                        axs[k].plot(glob_acc, color=color, linestyle=linestyle, label=label + str_K)
-                        axs[k].legend(loc="lower right")
-    plt.show()
-
-
 def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gaussian, local_updates, sample_ratio,
-                    model_name):
-    epochs = int(local_updates * sample_ratio)
-    colours = ['g', 'orange', 'black']
+                    user_ratio, model_name):
+    """
+    Plots the train loss metric for DP and no DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, on per subplot/col
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - user_ratio
+    - model_name
+    """
+
+    colours = ['orange', 'black']  # size = size of algorithms
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
-    # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
 
     if len(similarities) == 1:
         axs = [axs]
@@ -442,9 +473,11 @@ def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gau
                     file_name += "_" + algorithm
                     file_name += "_" + str(similarity) + "s"
                     if algorithm == "FedSGD":
-                        file_name += "_1K"
+                        file_name += "_" + str(int(1 / sample_ratio)) + "K"
                     else:
-                        file_name += "_" + str(epochs) + "K"
+                        file_name += "_" + str(local_updates) + "K"
+                    file_name += "_" + str(sample_ratio) + "sr"
+                    file_name += "_" + str(user_ratio) + "ur"
                     if dp != "None":
                         file_name += "_" + str(sigma_gaussian) + dp
                     label = algorithm
@@ -467,13 +500,99 @@ def plot_train_loss(dataset, algorithms, noises, similarities, number, sigma_gau
     plt.show()
 
 
-def plot_train_loss_multiple_K(dataset, algorithms, noises, similarities, number, list_of_sigma_gaussian,
-                               list_of_local_updates, sample_ratio, model_name):
-    list_of_epochs = [int(local_updates * sample_ratio) for local_updates in list_of_local_updates]
-    list_of_linestyle = ['dotted', 'dashed', 'solid']
-    colours = ['g', 'black']
+def plot_test_accuracy_multiple_sample_ratio(dataset, algorithms, noises, similarities, number, sigma_gaussian,
+                                             local_updates, list_of_sample_ratio, user_ratio, model_name):
+    """
+    Plots the test accuracy metric for DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, one per subplot/col
+    - list_of_sample_ratio: list of float, displayed on each subplot
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - user_ratio
+    - model_name
+    """
+
+    list_of_linestyle = ['dotted', 'dashed', 'solid']  # same size as list_of_sample_ratio
+    colours = ['orange', 'black']  # same size as algorithms
     fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
-    # fig.suptitle(f"{dataset} - Sigma_g={sigma_gaussian} - Local epochs={epochs}")
+
+    if len(similarities) == 1:
+        axs = [axs]
+
+    for k, similarity in enumerate(similarities):
+        axs[k].set_xlabel("Nb of communication rounds")
+        axs[k].set_ylabel("Test Accuracy over all users")
+        axs[k].grid()
+        if np.size(similarity) < 2:
+            axs[k].set_title(str(100 * similarity) + "% Similarity")
+        else:
+            alpha, beta = similarity
+            if alpha < 0 and beta < 0:
+                similarity = "iid"
+                axs[k].set_title("IID data")
+            else:
+                axs[k].set_title("(alpha, beta) = " + str(similarity))
+
+        for noise in noises:
+            for j, algorithm in enumerate(algorithms):
+                for dp in ["Gaussian"]:
+                    for (sample_ratio, linestyle) in list(
+                            zip(list_of_sample_ratio, list_of_linestyle)):
+                        file_name = "./results/" + model_name + "/" + dataset + '_' + number
+                        file_name += "_" + algorithm
+                        file_name += "_" + str(similarity) + "s"
+                        file_name += "_" + str(local_updates) + "K"
+                        file_name += "_" + str(sample_ratio) + "sr"
+                        file_name += "_" + str(user_ratio) + "ur"
+                        file_name += "_" + str(sigma_gaussian) + dp
+                        label = "DP-" + algorithm
+                        color = colours[j]
+                        if noise:
+                            file_name += '_noisy'
+                            label += ' with noise'
+                            color += ':'
+                        file_name += "_avg.h5"
+                        train_acc, train_loss, glob_acc, test_loss, train_diss = np.array(
+                            read_from_results(file_name))[:, :]
+                        str_sr = ", s={}".format(sample_ratio)
+                        axs[k].plot(glob_acc, color=color, linestyle=linestyle, label=label + str_sr)
+                        length = np.size(glob_acc)
+                        axs[k].axvline(x=length - 1, color='r', linewidth=0.2)
+                        axs[k].legend(loc="lower right")
+    plt.show()
+
+
+def plot_train_loss_multiple_sample_ratio(dataset, algorithms, noises, similarities, number, sigma_gaussian,
+                                          local_updates, list_of_sample_ratio, user_ratio, model_name):
+    """
+    Plots the train loss metric for DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, one per subplot/col
+    - list_of_sample_ratio: list of float, displayed on each subplot
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - user_ratio
+    - model_name
+    """
+
+    list_of_linestyle = ['dotted', 'dashed', 'solid']  # same size as list_of_sample_ratio
+    colours = ['orange', 'black']  # same size as algorithms
+    fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
 
     if len(similarities) == 1:
         axs = [axs]
@@ -499,12 +618,14 @@ def plot_train_loss_multiple_K(dataset, algorithms, noises, similarities, number
         for noise in noises:
             for j, algorithm in enumerate(algorithms):
                 for dp in ["Gaussian"]:
-                    for (epochs, sigma_gaussian, linestyle) in list(
-                            zip(list_of_epochs, list_of_sigma_gaussian, list_of_linestyle)):
+                    for (sample_ratio, linestyle) in list(
+                            zip(list_of_sample_ratio, list_of_linestyle)):
                         file_name = "./results/" + model_name + "/" + dataset + '_' + number
                         file_name += "_" + algorithm
                         file_name += "_" + str(similarity) + "s"
-                        file_name += "_" + str(epochs) + "K"
+                        file_name += "_" + str(local_updates) + "K"
+                        file_name += "_" + str(sample_ratio) + "sr"
+                        file_name += "_" + str(user_ratio) + "ur"
                         file_name += "_" + str(sigma_gaussian) + dp
                         label = "DP-" + algorithm
                         color = colours[j]
@@ -517,7 +638,230 @@ def plot_train_loss_multiple_K(dataset, algorithms, noises, similarities, number
                             read_from_results(file_name))[:, :]
                         if log:
                             train_loss = np.log(train_loss)
-                        str_K = ", K={}".format(int(epochs / sample_ratio))
-                        axs[k].plot(train_loss, color=color, linestyle=linestyle, label=label + str_K)
+                        str_sr = ", s={}".format(sample_ratio)
+                        axs[k].plot(train_loss, color=color, linestyle=linestyle, label=label + str_sr)
+                        length = np.size(glob_acc)
+                        axs[k].axvline(x=length - 1, color='r', linewidth=0.2)
                         axs[k].legend(loc="lower left")
     plt.show()
+
+
+def plot_test_accuracy_multiple_user_ratio(dataset, algorithms, noises, similarities, number, sigma_gaussian,
+                                           local_updates, sample_ratio, list_of_user_ratio, model_name):
+    """
+    Plots the test accuracy metric for DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, one per subplot/col
+    - list_of_user_ratio: list of float, displayed on each subplot
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - model_name
+    """
+
+    list_of_linestyle = ['dotted', 'dashed', 'solid']  # same size as list_of_user_ratio
+    colours = ['orange', 'black']  # same size as algorithms
+    fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
+
+    if len(similarities) == 1:
+        axs = [axs]
+
+    for k, similarity in enumerate(similarities):
+        axs[k].set_xlabel("Nb of communication rounds")
+        axs[k].set_ylabel("Test Accuracy over all users")
+        axs[k].grid()
+        if np.size(similarity) < 2:
+            axs[k].set_title(str(100 * similarity) + "% Similarity")
+        else:
+            alpha, beta = similarity
+            if alpha < 0 and beta < 0:
+                similarity = "iid"
+                axs[k].set_title("IID data")
+            else:
+                axs[k].set_title("(alpha, beta) = " + str(similarity))
+
+        for noise in noises:
+            for j, algorithm in enumerate(algorithms):
+                for dp in ["Gaussian"]:
+                    for (user_ratio, linestyle) in list(
+                            zip(list_of_user_ratio, list_of_linestyle)):
+                        file_name = "./results/" + model_name + "/" + dataset + '_' + number
+                        file_name += "_" + algorithm
+                        file_name += "_" + str(similarity) + "s"
+                        file_name += "_" + str(local_updates) + "K"
+                        file_name += "_" + str(sample_ratio) + "sr"
+                        file_name += "_" + str(user_ratio) + "ur"
+                        file_name += "_" + str(sigma_gaussian) + dp
+                        label = "DP-" + algorithm
+                        color = colours[j]
+                        if noise:
+                            file_name += '_noisy'
+                            label += ' with noise'
+                            color += ':'
+                        file_name += "_avg.h5"
+                        train_acc, train_loss, glob_acc, test_loss, train_diss = np.array(
+                            read_from_results(file_name))[:, :]
+                        str_ur = ", l={}".format(user_ratio)
+                        axs[k].plot(glob_acc, color=color, linestyle=linestyle, label=label + str_ur)
+                        length = np.size(glob_acc)
+                        axs[k].axvline(x=length - 1, color='r', linewidth=0.2)
+                        axs[k].legend(loc="lower right")
+    plt.show()
+
+
+def plot_train_loss_multiple_user_ratio(dataset, algorithms, noises, similarities, number, sigma_gaussian,
+                                        local_updates, sample_ratio, list_of_user_ratio, model_name):
+    """
+    Plots the train loss metric for DP settings over the communication rounds:
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - similarities: list of similarity parameters, one per subplot/col
+    - list_of_user_ratio: list of float, displayed on each subplot
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - model_name
+    """
+
+    list_of_linestyle = ['dotted', 'dashed', 'solid']  # same size as list_of_user_ratio
+    colours = ['orange', 'black']  # same size as algorithms
+    fig, axs = plt.subplots(1, len(similarities), constrained_layout=True, sharey='all')
+
+    if len(similarities) == 1:
+        axs = [axs]
+
+    for k, similarity in enumerate(similarities):
+        axs[k].set_xlabel("Nb of communication rounds")
+        axs[k].grid()
+        log = True
+        if np.size(similarity) < 2:
+            axs[k].set_ylabel("log(F(x_t)-F(x*))")
+            axs[k].set_title(str(100 * similarity) + "% Similarity")
+        else:
+            alpha, beta = similarity
+            if alpha < 0 and beta < 0:
+                similarity = "iid"
+                axs[k].set_title("IID data")
+                axs[k].set_ylabel("F(x_t)")
+                log = False
+            else:
+                axs[k].set_title("(alpha, beta) = " + str(similarity))
+                axs[k].set_ylabel("log(F(x_t)-F(x*))")
+
+        for noise in noises:
+            for j, algorithm in enumerate(algorithms):
+                for dp in ["Gaussian"]:
+                    for (user_ratio, linestyle) in list(
+                            zip(list_of_user_ratio, list_of_linestyle)):
+                        file_name = "./results/" + model_name + "/" + dataset + '_' + number
+                        file_name += "_" + algorithm
+                        file_name += "_" + str(similarity) + "s"
+                        file_name += "_" + str(local_updates) + "K"
+                        file_name += "_" + str(sample_ratio) + "sr"
+                        file_name += "_" + str(user_ratio) + "ur"
+                        file_name += "_" + str(sigma_gaussian) + dp
+                        label = "DP-" + algorithm
+                        color = colours[j]
+                        if noise:
+                            file_name += '_noisy'
+                            label += ' with noise'
+                            color += ':'
+                        file_name += "_avg.h5"
+                        train_acc, train_loss, glob_acc, test_loss, train_diss = np.array(
+                            read_from_results(file_name))[:, :]
+                        if log:
+                            train_loss = np.log(train_loss)
+                        str_ur = ", l={}".format(user_ratio)
+                        axs[k].plot(train_loss, color=color, linestyle=linestyle, label=label + str_ur)
+                        length = np.size(train_loss)
+                        axs[k].axvline(x=length - 1, color='r', linewidth=0.2)
+                        axs[k].legend(loc="lower left")
+    plt.show()
+
+
+def print_test_accuracy_last_rounds(dataset, algorithms, noises, similarity, number, sigma_gaussian, local_updates,
+                                    sample_ratio,
+                                    user_ratio, model_name, times, ratio_iterations):
+    """
+    Plots the average test accuracy metric for DP settings over the last 10% of communication rounds.
+
+    Parameters with multiple values:
+    - algorithms: list of str, EX: ['FedAvg', 'SCAFFOLD'], displayed on each subplot
+    - noises: list of boolean, by default ['False']
+
+    Parameters with single value:
+    - dataset
+    - similarity
+    - number
+    - sigma_gaussian
+    - local_updates
+    - sample_ratio
+    - user_ratio
+    - model_name
+    - times
+    - ratio_iterations
+    """
+    for noise in noises:
+        for j, algorithm in enumerate(algorithms):
+            for dp in ["Gaussian"]:
+                file_name = "./results/" + model_name + "/" + dataset + '_' + number
+                file_name += "_" + algorithm
+                file_name += "_" + str(similarity) + "s"
+                if algorithm == "FedSGD":
+                    file_name += "_" + str(int(1 / sample_ratio)) + "K"
+                else:
+                    file_name += "_" + str(local_updates) + "K"
+                file_name += "_" + str(sample_ratio) + "sr"
+                file_name += "_" + str(user_ratio) + "ur"
+                if dp != "None":
+                    file_name += "_" + str(sigma_gaussian) + dp
+                if noise:
+                    file_name += '_noisy'
+                print("Algorithm: ", algorithm)
+                res_glob = []
+                for time in range(times):
+                    file_name_time = file_name + "_" + str(time) + ".h5"
+                    train_acc, train_loss, glob_acc, test_loss, train_diss = np.array(
+                        read_from_results(file_name_time))[:, :]
+                    length = np.size(glob_acc)
+                    if time == 0:
+                        print(glob_acc[-int(ratio_iterations * length):])
+                    res = np.mean(glob_acc[-int(ratio_iterations * length):])
+                    print("T:", length, ", run number:", time, ", average test accuracy on the last ",
+                          100 * ratio_iterations, "%:",
+                          res)
+                    res_glob.append(res)
+                print("Average accuracy (all runs): {:.2f}".format(np.mean(res_glob) * 100.))
+                print("Std accuracy (all runs)    : {:.2f}".format(np.std(res_glob) * 100.))
+
+
+if __name__ == "__main__":
+    # test of the last function
+    dataset = 'Logistic'
+    algorithms = ['SCAFFOLD']
+    noises = [False]
+    similarity = (5.0, 5.0)
+    number = str(0)
+    sigma_gaussian = 10.0
+    local_updates = 10
+    sample_ratio = 0.2
+    user_ratio = 0.05
+    model_name = 'mclr'
+    times = 3
+    ratio_iterations = 0.1
+    print_test_accuracy_last_rounds(dataset, algorithms, noises, similarity, number, sigma_gaussian, local_updates,
+                                    sample_ratio,
+                                    user_ratio, model_name, times, ratio_iterations)
