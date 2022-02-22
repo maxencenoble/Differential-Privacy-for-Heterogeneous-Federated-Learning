@@ -128,7 +128,7 @@ If you use this code, please cite the following (BibTex format):
 @inproceedings{Noble2022dpscaffold,
   title        = {Differentially Private Federated Learning on Heterogeneous Data},
   author       = {Noble, Maxence and Bellet, Aur{\'e}lien and Dieuleveut Aymeric},
-  booktitle    = {Artificial intelligence and statistics},
+  booktitle    = {25th International Conference on Artificial Intelligence and Statistics},
   year         = {2022},
   organization = {PMLR}
 }
