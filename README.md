@@ -1,7 +1,7 @@
 # **Differential Privacy for Heterogeneous Federated Learning : Utility \& Privacy tradeoffs**
 
 This repository is the official code for
-paper [Differential Privacy for Heterogeneous Federated Learning](https://arxiv.org/abs/2111.09278).
+paper [Differential Privacy for Heterogeneous Federated Learning](https://arxiv.org/abs/2111.09278), AISTATS 2022.
 
 In our paper, we propose an algorithm DP-SCAFFOLD(-warm), which is a new version of the so-called SCAFFOLD algorithm (
 warm version : wise initialisation of parameters), to tackle heterogeneity issues under mathematical privacy constraints
@@ -116,9 +116,23 @@ Metrics (evaluated at each round of communication):
 - highest norm of parameter difference (server/user) over all selected users,
 - train gradient dissimilarity over all users.
 
-# Software requirements:
+# Software requirements
 
 - To download the dependencies: **pip install -r requirements.txt**.
+
+# Citation
+
+If you use this code, please cite the following (BibTex format):
+
+``` bash
+@inproceedings{Noble2022dpscaffold,
+  title        = {Differentially Private Federated Learning on Heterogeneous Data},
+  author       = {Noble, Maxence and Bellet, Aur{\'e}lien and Dieuleveut Aymeric},
+  booktitle    = {Artificial intelligence and statistics},
+  year         = {2022},
+  organization = {PMLR}
+}
+```
 
 # References
 
